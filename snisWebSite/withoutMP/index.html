@@ -1,0 +1,96 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<meta http-equiv="Content-Language" content="en-us">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta http-equiv="Cache-Control" content="no-store" />
+	<title>Simple Network Information Server</title>
+	<link href="Resources/styles_red.css" rel="stylesheet" type="text/css" />
+	<link href="Resources/favicon.ico" rel="icon" type="image/ico" />
+</head>
+<body>
+<div class="body_container">
+	<!-- header -->
+	<div>
+		<div class="header">
+			<a href="index.html"><img src="Resources/mhs_ico_256.png" width="100" /><label>Matlab SNIS - Simple Network Information Server</label></a>
+		</div>
+		<div class="menu_container">
+			<ul id="menu1" class="menu">
+				<li class="menu_termin_left"></li>
+				<li><a href="index.sns">Home</a></li>
+				<li class="menu_separator"></li>
+				<li><a href="/snScriptDemo1.sns">SnS Demo</a></li>
+				<li class="menu_separator"></li>
+				<li><a href="/snScriptDemo2.sns">SnS Conditional Page</a></li>
+				<li class="menu_separator"></li>
+				<li><a href="/SnisPocController/">Web Service</a></li>
+				<li class="menu_separator"></li>
+				<li><a href="thereIsNoSuchPage.html">Error Page</a></li>
+				<li class="menu_termin_right"></li>
+			</ul>
+		</div>
+		<div class="main_title">
+			<label>Simple Network Information Server</label>
+		</div>
+	</div>
+	
+	<!-- content -->
+	<div class="content">
+		<div class="main_data info_container rounded_top rounded_bottom">
+			<div class="info">
+				<p class="hp-text">
+					<div>
+					<p>Matlab SNIS is a simple self hosting HTTP server.</p>
+					<p>This free implementation is usefull for simple applications (It's by no means as robust as actual servers like Apache and IIS)</p>
+					<p>The server utilizes TCP/IP server sockets when the instrument control toolkit is available and falls back to undocumented JavaServerSocket otherwise.</p>
+					</div>
+					<div>
+					<p>SNISs architecture is inspired by ASP.Net Pipeline</p>
+					<p>Http requests are handled by objects which implement the abstract class HttpHandler.</p>
+					<p>Supported:</p>
+						<ul>
+							<li>Text files (html, css, js, json, xml, txt)</li>
+							<li>Images</li>
+							<li>Execute web service methods</li>
+							<li>List web service methods</li>
+						</ul>
+					<p>HttpHandlers list is currently hardcoded in HttpServer ctor, but can be easily injected from outside or loaded from <a href="https://www.mathworks.com/matlabcentral/fileexchange/67966-mxml">MXML</a> files.</p>
+					</div>
+					
+					<div>
+					<p>Session state is maintained by AppSession class.</p>
+					<p>Session id is (traditionally) saved as a cookie ("sid").</p>
+					</div>
+					<div>
+					<p>SNIS exposes AppControllers as webservices via the WebServiceHttpHandler.</p>
+					</div>
+					<div>
+					<p>Example:</p>
+					<div class="code">
+					<p>server = HttpServer();</p>
+					
+					<p><span class="comment">// or</span></p>
+					
+					<p>config = HttpServerConfig([name, value, ...]);</p>
+					<p>server = HttpServer(config);</p>
+					<hr>
+					<p>server.start();</p>
+					<p>server.listen();</p>
+					<p>server.stop();</p>
+					</div>
+					</div>
+				</p>
+			</div>
+		</div>
+	</div>
+	
+	<!-- Footer -->
+	<div class="footer">
+		<div class="bottom" align="center" height="24">
+			Written by TADA 2018, The Hebrew University of Jerusalem, Israel.
+		</div>
+	</div>
+</div>
+</body>
+</html>

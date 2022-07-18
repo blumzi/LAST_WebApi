@@ -1,0 +1,46 @@
+<% 
+
+% Handle form submit
+% in general this type of coding is not advised,
+% postbacks in general have a tendency to kill your performance
+% I would submit this form to a webservice and redirect back here if you
+% must post a form just to avoid these ugly code blocks in SNS files
+% The best option is usually to send the form to a webservice using AJAX
+% Here I use it as a proof of concept though to show SNS capabilities
+style = sns.request.get('choose_style');
+if ~isempty(style)
+	sns.session.set('style', style);
+end
+
+% Important Notice!
+% This form submition handling script can work before the decleration of
+% the master page only because it doesn't afect the respons.
+% If something needs to be written to the response it can't be done before 
+% master page decleration!
+
+%>
+<%? MasterPage /masterPage.snmp %>
+<%? Content PageTitle %>SnScript - Conditional Page<%? /Content %>
+<%? Content PageContent %>
+    <p class="hp-text">
+        <div>
+            <% if strcmp(sns.request.get('size'), 'big')
+            %>
+            <h1> THIS TEXT IS VERY BIG!</h1>
+            <% else %>
+            <label>this text is quite small</label>
+            <% end %>
+        </div>
+        <form method="post">
+            <div><label>Show big text?</label> <input type="checkbox" name="size" value="big" <% if strcmp(sns.request.get('size'), 'big'); sns.write('checked'); end %> /></div>
+            <div>
+                <label>select website style:</label>
+                <select name="choose_style">
+                    <option value="blue" <% if any(strcmp(sns.session.get('style'), {'', 'blue'})); sns.write('selected'); end %>>Blue</option>
+                    <option value="purple" <% if any(strcmp(sns.session.get('style'), 'purple')); sns.write('selected'); end %>>Purple</option>
+                </select>
+            </div>
+            <input type="submit" />
+        </form>
+    </p>
+<%? /Content %>

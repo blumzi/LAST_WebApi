@@ -1,0 +1,8 @@
+<head>
+	<meta http-equiv="Content-Language" content="en-us">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta http-equiv="Cache-Control" content="no-store" />
+	<title>Simple Network Information Server</title>
+	<link href="Resources/styles_<%sns.write(cond(strcmp(sns.session.get('style'), 'purple'), 'purple', 'blue'));%>.css" rel="stylesheet" type="text/css" />
+	<link href="Resources/favicon.ico" rel="icon" type="image/ico" />
+</head>

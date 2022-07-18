@@ -1,0 +1,97 @@
+<%? MasterPage /masterPage.snmp %>
+
+<%? Content PageTitle %>Simple Network Information Server<%? /Content %>
+<%? Content PageContent %>
+<p class="hp-text">
+	<div>
+		<p>Matlab SNIS is a simple self hosting HTTP server.</p>
+		<p>This free implementation is usefull for simple applications (It's by no means as robust as actual servers like Apache and IIS)</p>
+		<p>The server utilizes TCP/IP server sockets when the instrument control toolkit is available and falls back to undocumented JavaServerSocket otherwise.</p>
+	</div>
+	
+	<div>
+		<h4>Http Handlers</h4>
+		<p>Http requests are handled by objects which implement the abstract class HttpHandler (inspired by ASP.Net architecture, no ISAPIs here)</p>
+		<p>Supported:</p>
+		<ul>
+			<li>Text files (html, css, js, json, xml, txt)</li>
+			<li>Images (png, jpg, gif, ico, bmp)</li>
+			<li>Execute web service methods</li>
+			<li>List web service methods</li>
+			<li>Simple network script pages (sns, similar to classic ASP but with benefits)</li>
+		</ul>
+		<p>HttpHandlers list is currently hardcoded in Simple.Net.HttpServer ctor, but can be easily injected from outside or loaded from <a href="https://www.mathworks.com/matlabcentral/fileexchange/67966-mxml">MXML</a> files.</p>
+	</div>
+	
+	<div>
+		<h4>Session State</h4>
+		<p>Session state is maintained by Simple.App.AppSession class.</p>
+		<p>Session id is (traditionally) saved as a cookie ("sid").</p>
+		<p>Known issues:</p>
+		<ul>
+			<li>when the session id cookie in the browser out lives the matlab session or when Simple.App.App is reset (not the Simple.Net.HttpServer)
+				a session expired exception is thrown on the first request</li>
+		</ul>
+	</div>
+	<div>
+		<h4>Web Services</h4>
+		<p>SNIS exposes Simple.App.AppControllers as webservices via the WebServiceHttpHandler.</p>
+	</div>
+	
+	<div>
+		<h4>Simple Network Script Pages (SNS)</h4>
+		<p>For those of you that have been here long enough, SNS resembles classic ASP.</p>
+		<p>Pages are written as plain html, and matlab code is embeded inside the page to manipulate it in the server side within &lt;% %&gt; tags.</p>
+		<p>SNS pages are parsed by the SnsHttpHandler and transformed into a matlab function saved in an .m file.</p>
+		<p>The function has one input parameter: sns - instance of the SnScript class.</p>
+		<p>Use the sns object to access the request, response & session objects as well as to include other resources (html, sns files) within the page.</p>
+		<p>SNS pages are only parsed if the matching SNS.m file doesn't exist or if it's outdated.</p>
+		<p>Known Issues:</p>
+		<ul>
+			<li>The transpose operator ' is not supported within sns files, because it messes up the regex which locates script blocks</li>
+			<li> ** Workaround: use sns.transpose(x); or your own function with a shorter name ^_^ </li>
+		</ul>
+	</div>
+
+	<div>
+	<h4>Acknowledgements</h4>
+	<p>Some of the code was taken from <a href="https://www.mathworks.com/matlabcentral/fileexchange/29027-web-server">Dirk-Jan Kroons original webserver library (2010)</a></p>
+	<ul>
+		<li>Some of the request parsing code</li>
+		<li>The JavaTcpServer function was taken as a whole to manage JavaServerSockets</li>
+		<li>perhaps some other bits of code here and there</li>
+	</ul>
+	</div>
+	
+	<div>
+	<h4>Example:</h4>
+	<div class="code">
+    <p><span class="comment">% Setup server with default settings - don't use this option</span></p>
+	<p>server = Simple.Net.HttpServer();</p>
+	
+	<p><span class="comment">% or</span></p>
+
+    <p><span class="comment">% Setup server with specific settings</span></p>
+	<p>config = Simple.Net.HttpServerConfig([name, value, ...]);</p>
+	<p>server = Simple.Net.HttpServer(config);</p>
+	<hr />
+
+    <p><span class="comment">% Start the server - this will freeze your Matlab client</span></p>
+    <p><span class="comment">% when listening to tcpip on specified port</span></p>
+	<p>server.start();</p>
+	<p>server.listen();</p>
+	<p>server.stop();</p>
+	<hr />
+    
+	<p><span class="comment">% When the Parallel Computing Toolbox™ is available,</span></p>
+    <p><span class="comment">% use the startAsync method to start the server in a worker</span></p>
+    <p><span class="comment">% This prevents client freezing while the server is active</span></p>
+    <p><span class="comment">% Parpools take a while to setup, so be patient...</span></p>
+    <p><span class="comment">% If PCT is not available startAsync starts the server synchronously</span></p>
+    <p><span class="comment">% just like running server.start().listen();</span></p>
+    <p>server.startAsync();</p>
+	<p>server.stop();</p>
+	</div>
+	</div>
+</p>
+<%? /Content %>

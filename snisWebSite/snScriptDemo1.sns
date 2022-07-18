@@ -1,0 +1,25 @@
+<%? MasterPage /masterPage.snmp %>
+
+<%? Content PageTitle %>Simple Network Script<%? /Content %>
+
+<%? Content PageContent %>	
+    <p class="hp-text">
+        <div>
+            <label>Server Time:</label><label><% sns.write(datestr(now, 'DDDD, DD mmm yyyy, HH:MM:ss.fff')); %></label>
+        </div>
+    </p>
+    <div>
+        <p class="hp-text">The above sample is generated using the following HTML, SN-Script:</p>
+        <div class="code">
+            <p>&lt;p class=&quot;hp-text&quot;&gt;</p>
+                <p>&lt;div&gt;</p>
+                    <p>&lt;label&gt;Server Time:&lt;/label&gt;</p>
+                    <p>&lt;label&gt;</p>
+                        <p>&lt;% sns.write(datestr(now, &apos;DDDD, DD mmm yyyy, HH:MM:ss.fff&apos;)); %&gt;</p>
+                    <p>&lt;/label&gt;</p>
+                <p>&lt;div&gt;</p>
+            <p>&lt;/p&gt;</p>
+        </div>
+        <p></p>
+    </div>
+<%? /Content %>
