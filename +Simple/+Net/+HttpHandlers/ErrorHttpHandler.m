@@ -38,6 +38,7 @@ classdef ErrorHttpHandler < Simple.Net.HttpHandlers.FileTypeHttpHandler
             if ~isempty(this.errorToHandle); ex = this.errorToHandle; else; ex = lasterror; end
             
             response = request.Response;
+            isOcs = strcmp(class(app), 'SnisOcsApp');
             
             % prepare error details
             status = 500;
@@ -59,7 +60,7 @@ classdef ErrorHttpHandler < Simple.Net.HttpHandlers.FileTypeHttpHandler
             response.Status = status;
             
             % Handle error page
-            if isfield(file, 'content') && ~isempty(file.content)                 
+            if isfield(file, 'content') && ~isempty(file.content)               
                 body = strrep(file.content, '{ErrorCode}', num2str(status));
                 body = strrep(body, '{ErrorText}', err.message);
                 body = strrep(body, '{ErrorId}', err.identifier);
@@ -67,9 +68,18 @@ classdef ErrorHttpHandler < Simple.Net.HttpHandlers.FileTypeHttpHandler
                 response.write(body);
             % Handle error for web service response
             else
-                response.ContentType='application/xml; charset=UTF-8';
-                responseSimple.Net.Envelope = Simple.Net.Envelope.Error(status, err, []);
-                body = Simple.IO.MXML.toxml(responseSimple.Net.Envelope);
+                if isOcs
+                    response.Status = 200;
+                    response.ContentType='application/json; charset=UTF-8';
+                    body = jsonencode(struct('Value', string(nan)...
+                        , 'ErrorId', err.identifier...
+                        , 'ErrorMessage', err.message...
+                        , 'ErrorReport', err.report));
+                else
+                    response.ContentType='application/xml; charset=UTF-8';
+                    responseSimple.Net.Envelope = Simple.Net.Envelope.Error(status, err, []);
+                    body = Simple.IO.MXML.toxml(responseSimple.Net.Envelope);
+                end
                 response.write(body);
             end
         end
@@ -80,7 +90,7 @@ classdef ErrorHttpHandler < Simple.Net.HttpHandlers.FileTypeHttpHandler
             else
                 % handle default file
                 filePath = which('Simple.Net.HttpServer');
-                filePath = [filePath(1:end-length('HttpServer.m')) 'Templates\error.html'];
+                filePath = [filePath(1:end-length('HttpServer.m')) 'Templates/error.html'];
             end
         end
         

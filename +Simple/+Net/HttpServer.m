@@ -123,7 +123,7 @@ classdef HttpServer < handle
         
         function this = startAsync(this)
             if ~this.hasSufficientPCT()
-                disp('Parallel Computing Toolbox™ or some of its components are not available for you, starting synchronously instead');
+                disp('Parallel Computing Toolboxï¿½ or some of its components are not available for you, starting synchronously instead');
                 this.start().listen();
                 return;
             end
@@ -246,6 +246,7 @@ classdef HttpServer < handle
                 this.requestPipeline(request);
             end
             
+            this.log('WTF: 0');
             this.stop();
             this.isStopping = false;
             this.checkStopFlag = false;
@@ -488,7 +489,9 @@ classdef HttpServer < handle
         end
         
         function logger = getLogger(this)
-            fullpath = [this.config.rootPath '\log\info_' datestr(now, 'yyyy-mm-dd') '.log'];
+            fullpath = [this.config.rootPath '/log/info_' datestr(now, 'yyyy-mm-dd') '.log'];
+            [parent, ~, ~] = fileparts(fullpath);
+            [~, ~] = mkdir(parent);
             logger = log4m.getLogger(fullpath);
             
             if ~strcmp(logger.fullpath, fullpath)

@@ -4,13 +4,16 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
     
     methods
         function ismatch = matches(this, request, app)
-            ismatch = any(regexp(request.Filename, '^\/?\w+(?:\/\w+)?\/?$'));
+            ismatchOriginal = any(regexp(request.Filename, '^\/?\w+(?:\/\w+)?\/?$'));
+            ismatchOcs = any(regexp(request.Filename, ...
+                '\/?(api)\/(v\d+)\/((mount|focuser|camera|switch))\/(\d+|[NnSs][WwEe])\/(\w+)'));
+            ismatch = ismatchOriginal | ismatchOcs;
         end
         
         function handleRequest(this, request, app)
             serviceUrl=request.Filename;
             response = request.Response;
-    
+            
             if ~isempty(serviceUrl) > 0 && serviceUrl(1) == '/'
                 serviceUrl = serviceUrl(2:end);
             end
@@ -19,19 +22,33 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
             end
             serviceUrlParts = strsplit(serviceUrl, '/');
             
-            if length(serviceUrlParts) == 1
+            isOcs = strcmp(serviceUrlParts{1}, 'ocs');
+            
+            nparts = length(serviceUrlParts);
+            if nparts == 1 
                 % Handle Service Methods Listing
                 foo = @Simple.Net.HttpHandlers.WebServiceHttpHandler.generateControllerMethodsHTML;
                 response.write(foo(request, this.getController(request, app, serviceUrlParts{1}), serviceUrlParts{1}));
-            elseif length(serviceUrlParts) == 2
+            elseif nparts == 2 || (isOcs && nparts == 6)
                 % Invoke service method
-                output = this.invokeServiceMethod(request, response, app, serviceUrlParts{1}, serviceUrlParts{2});
+                if isOcs
+                    response.ContentType='application/json; charset=UTF-8';
+                    apiVersion = serviceUrlParts{3};
+                    device = serviceUrlParts{4};
+                    unitId = serviceUrlParts{5};
+                    method = serviceUrlParts{6};
+                    output = this.invokeOcsServiceMethod(request, response, app, device, unitId, method);
+                    response.write(jsonencode(struct('Value', output...
+                        , 'ErrorId', string(nan)...
+                        , 'ErrorMessage', string(nan)...
+                        , 'ErrorReport', string(nan))));
+                else
+                    response.ContentType='application/xml; charset=UTF-8';
+                    output = this.invokeServiceMethod(request, response, app, serviceUrlParts{1}, serviceUrlParts{2});
+                    responseEnvelope = Simple.Net.Envelope.Response(output);
+                    response.write(Simple.IO.MXML.toxml(responseEnvelope));
+                end
                 
-                response.ContentType='application/xml; charset=UTF-8';
-                
-                % Wrap response body with SOAPish Simple.Net.Envelope
-                responseEnvelope = Simple.Net.Envelope.Response(output);
-                response.write(Simple.IO.MXML.toxml(responseEnvelope));
             else
                 Simple.Net.HttpServer.RaiseBadHttpHandlerMapping(request, class(this))
             end
@@ -104,26 +121,93 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                 args{i-1} = request.get(argName);
             end
         end
+        
+        function controller = getOcsController(this, request, app, controllerName)
+            try
+                controller = app.getController(controllerName);
+            catch
+                Simple.Net.HttpServer.RaiseFileNotFoundError(request, [ 'WebService' controllerName ' not available']);
+            end
+            
+        end
+        
+        
+        function output = invokeOcsServiceMethod(this, request, response, app, device, unitId, serviceMethod)
+                        
+            deviceMap = containers.Map(...
+                {'mount',            'camera',           'focuser',             'switch'}, ...
+                {app.current.mounts, app.current.cameras, app.current.focusers, app.current.pswitches}...
+                );
+            
+            if isKey(deviceMap, device)            
+                units = deviceMap(device);
+            else
+                SnisOcsApp.RaiseInvalidDeviceError(request, "Invalid device '" + device + "'. Valid devices are: " + strjoin(keys(deviceMap), ', ') );
+            end
+            
+            if isKey(units, unitId)
+                unit = units(unitId);
+            else
+                SnisOcsApp.RaiseInvalidUnitError(request, ...
+                    "Invalid unitID '" + unitId + "' for device '" + device + "'. Valid units IDs are: [" + strjoin(keys(units), ', ') + "]");
+            end
+            
+            validMethods = {};
+            m = metaclass(unit);
+            for i = 1:length(m.MethodList())
+                if strcmp(m.MethodList(i).Description, 'wrapper')
+                    validMethods{end+1} = m.MethodList(i).Name;
+                end
+            end
+            
+            method = [];
+            for i = 1:length(m.MethodList())
+                if strcmp(serviceMethod, m.MethodList(i).Name)
+                    method = m.MethodList(i);
+                    break;
+                end
+            end
+            
+            if isempty(method)
+                SnisOcsApp.RaiseInvalidMethodError(request, ...
+                    "Invalid method '" + serviceMethod + "' for device '" + device + "'. Valid methods are: [" + strjoin(validMethods, ', ') + "]");
+            end
+            
+            % Prepare in/out arguments
+            nOutArgs = length(method.OutputNames);
+            outArgs = cell(1, nOutArgs);
+            inArgs = this.mapMethodArguments(request, method);
+
+            % Invoke controller's method  
+            [outArgs{:}] = unit.(method.Name)(inArgs{:});
+                
+            
+            % return output arguments as a struct (which can be serialized
+            % easily)
+            for oai = 1:nOutArgs
+                output.(method.OutputNames{oai}) = outArgs{oai};
+            end
+        end
     end
     
     methods(Static,Access=private)
         function html = generateControllerMethodsHTML(request, controller, controllerName)
 
             currentPath = which('Simple.Net.HttpServer');
-            currentPath = currentPath(1:find(currentPath=='\',1,'last'));
+            currentPath = currentPath(1:find(currentPath=='/',1,'last'));
 
             % Load html template
-            fid = fopen([currentPath 'Templates\ServiceMethodListing.html']);
+            fid = fopen([currentPath 'Templates/ServiceMethodListing.html']);
             html = fread(fid, '*char')';
             fclose(fid);
 
             % Load html template
-            fid = fopen([currentPath 'Templates\ServiceMethodDetails.html']);
+            fid = fopen([currentPath 'Templates/ServiceMethodDetails.html']);
             methodHtml = fread(fid, '*char')';
             fclose(fid);
 
             % Load html template
-            fid = fopen([currentPath 'Templates\ServiceMethodParam.html']);
+            fid = fopen([currentPath 'Templates/ServiceMethodParam.html']);
             parameterHtml = fread(fid, '*char')';
             fclose(fid);
 
