@@ -267,7 +267,7 @@ classdef App < handle
                 fileName = fileName1;
             end
             
-            fullLogPath = [path '\' fileName];
+            fullLogPath = [path '/' fileName];
             
             log = log4m.getLogger(fullLogPath);
             
