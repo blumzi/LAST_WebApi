@@ -1,0 +1,3 @@
+#!/bin/bash
+
+LANG=en_US matlab -nodisplay -batch "addpath('snisWebSite/ocs'); run('SnisOCS.m')" 
