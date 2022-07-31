@@ -132,37 +132,37 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
         end
         
         
-        function output = invokeOcsServiceMethod(this, request, response, app, device, unitId, serviceMethod)
+        function output = invokeOcsServiceMethod(this, request, response, app, requestedDevice, requestedUnit, requestedMethod)
                         
             deviceMap = containers.Map(...
                 {'mount',            'camera',           'focuser',             'switch'}, ...
                 {app.current.mounts, app.current.cameras, app.current.focusers, app.current.pswitches}...
                 );
             
-            if isKey(deviceMap, device)            
-                units = deviceMap(device);
+            if isKey(deviceMap, requestedDevice)            
+                units = deviceMap(requestedDevice);
             else
-                SnisOcsApp.RaiseInvalidDeviceError(request, "Invalid device '" + device + "'. Valid devices are: " + strjoin(keys(deviceMap), ', ') );
+                SnisOcsApp.RaiseInvalidDeviceError(request, "Invalid device '" + requestedDevice + "'. Valid devices are: " + strjoin(keys(deviceMap), ', ') );
             end
             
-            if isKey(units, unitId)
-                unit = units(unitId);
+            if isKey(units, requestedUnit)
+                unit = units(requestedUnit);
             else
                 SnisOcsApp.RaiseInvalidUnitError(request, ...
-                    "Invalid unitID '" + unitId + "' for device '" + device + "'. Valid units IDs are: [" + strjoin(keys(units), ', ') + "]");
+                    "Invalid unitID '" + requestedUnit + "' for device '" + requestedDevice + "'. Valid units IDs are: [" + strjoin(keys(units), ', ') + "]");
             end
             
             validMethods = {};
             m = metaclass(unit);
             for i = 1:length(m.MethodList())
-                if strcmp(m.MethodList(i).Description, 'wrapper')
+                if strcmp(m.MethodList(i).Description, 'api')
                     validMethods{end+1} = m.MethodList(i).Name;
                 end
             end
             
             method = [];
             for i = 1:length(m.MethodList())
-                if strcmp(serviceMethod, m.MethodList(i).Name)
+                if strcmp(requestedMethod, m.MethodList(i).Name)
                     method = m.MethodList(i);
                     break;
                 end
@@ -170,7 +170,7 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
             
             if isempty(method)
                 SnisOcsApp.RaiseInvalidMethodError(request, ...
-                    "Invalid method '" + serviceMethod + "' for device '" + device + "'. Valid methods are: [" + strjoin(validMethods, ', ') + "]");
+                    "Invalid method '" + requestedMethod + "' for device '" + requestedDevice + "'. Valid methods are: [" + strjoin(validMethods, ', ') + "]");
             end
             
             % Prepare in/out arguments

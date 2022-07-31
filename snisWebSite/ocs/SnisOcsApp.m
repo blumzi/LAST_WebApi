@@ -12,7 +12,7 @@ classdef SnisOcsApp < Simple.App.App
         function this = SnisOcsApp()
             this.mounts     = containers.Map({'1'},         {OCSMount()});
             this.cameras    = containers.Map({'ne', 'se'},  {OCSCamera(),  OCSCamera()});   % TODO: use numeral keys as well
-            this.pswitches  = containers.Map({'ne', 'se'},  {OCSSwitch(),  OCSSwitch()});
+            this.pswitches  = containers.Map({'ne', 'se'},  {OCSPowerSwitch(),  OCSPowerSwitch()});
             this.focusers   = containers.Map({'ne', 'se'},  {OCSFocuser(), OCSFocuser()});
         end
     end

@@ -1,4 +1,4 @@
-classdef OCSSwitch < Simple.App.AppController
+classdef OCSPowerSwitch
     %OCSMOUNT Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -7,8 +7,8 @@ classdef OCSSwitch < Simple.App.AppController
         mount
     end
     
-    methods
-        function obj = OCSSwitch()
+    methods (Description='api')
+        function obj = OCSPowerSwitch()
             %OCSMOUNT Construct an instance of this class
             %   Detailed explanation goes here
             %obj.mount = XerxesMount(obj.serialPort);

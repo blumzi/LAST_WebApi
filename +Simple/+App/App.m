@@ -132,8 +132,9 @@ classdef App < handle
     
     methods (Access=protected)
         function [path, filename] = getLogPath(this)
-            path  = pwd;
-            filename = ['error ' datestr(now, 'yyyy-mm-dd.HH.MM.SS.FFF') '.log'];
+            %path  = pwd;
+            path = '/var/log/ocs/api'
+            filename = [datestr(now, 'yyyy-mm-dd.HH.MM.SS.FFF')  '.log'];
         end
     end
     

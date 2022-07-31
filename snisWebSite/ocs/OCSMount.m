@@ -1,4 +1,4 @@
-classdef OCSMount < Simple.App.AppController
+classdef OCSMount
     %OCSMOUNT Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -15,11 +15,11 @@ classdef OCSMount < Simple.App.AppController
         
     end
     
-    methods (Description='wrapper')
+    methods (Description='api')
         
-        function tf = slewing(this)
+        function out = slewing(this)
             this.logger.info('OCSMount', 'calling: slewing()')
-            tf = true; % this.mount.Slewing;
+            out = true; % this.mount.Slewing;
         end
         
         function out = park(this)

@@ -1,4 +1,4 @@
-classdef OCSFocuser < OCSDeviceInterface
+classdef OCSFocuser
     %OCSMOUNT Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -7,7 +7,7 @@ classdef OCSFocuser < OCSDeviceInterface
         focuser
     end
     
-    methods
+    methods (Description='api')
         function obj = OCSFocuser()
             %OCFOCUSER Construct an instance of this class
             %   Detailed explanation goes here

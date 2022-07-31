@@ -1,4 +1,4 @@
-classdef OCSCamera < OCSDeviceInterface
+classdef OCSCamera
     %OCSMOUNT Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -7,7 +7,7 @@ classdef OCSCamera < OCSDeviceInterface
         camera
     end
     
-    methods
+    methods (Description='api')
         function obj = OCSCamera()
             %OCFOCUSER Construct an instance of this class
             %   Detailed explanation goes here
