@@ -6,14 +6,28 @@ classdef SnisOcsApp < Simple.App.App
         cameras
         pswitches
         focusers
+        
+        hostname
+        mount_number
+        mount_side
     end
     
     methods
         function this = SnisOcsApp()
+            [ret, str] = system('hostname -s');
+            if ret == 0
+                this.hostname = str;
+                str = strrep(str, 'last', '');
+                this.mount_side = str(end);
+                this.mount_number = str2double(str(1:end-1));
+            else
+                throw(MException('OCS:SnisOcsApp', 'Cannot get hostname'));
+            end
+            
             this.mounts     = containers.Map({'1'},         {OCSMount()});
-            this.cameras    = containers.Map({'ne', 'se'},  {OCSCamera(),  OCSCamera()});   % TODO: use numeral keys as well
+            this.cameras    = containers.Map({'ne', 'se'},  {OCSCamera(),       OCSCamera()});   % TODO: use numeral keys as well
             this.pswitches  = containers.Map({'ne', 'se'},  {OCSPowerSwitch(),  OCSPowerSwitch()});
-            this.focusers   = containers.Map({'ne', 'se'},  {OCSFocuser(), OCSFocuser()});
+            this.focusers   = containers.Map({'ne', 'se'},  {OCSFocuser(),      OCSFocuser()});
         end
     end
     

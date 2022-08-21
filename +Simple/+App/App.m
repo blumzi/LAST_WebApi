@@ -130,10 +130,10 @@ classdef App < handle
         
     end
     
-    methods (Access=protected)
-        function [path, filename] = getLogPath(this)
+    methods (Static, Access=protected)
+        function [path, filename] = getLogPath()
             %path  = pwd;
-            path = '/var/log/ocs/api'
+            path = '/var/log/ocs/api';
             filename = [datestr(now, 'yyyy-mm-dd.HH.MM.SS.FFF')  '.log'];
         end
     end
@@ -144,7 +144,7 @@ classdef App < handle
                 err = getReport(err, 'extended');
             end
             logger = Simple.App.App.logger(path, fileName);
-            logger.error('', [msg sprintf('\n') err]);
+            logger.error('', [msg newline err]);
         end
         
         function app = instance(app, shouldInstantiate, shouldTerminate)

@@ -5,14 +5,14 @@ classdef OCSMount
     properties
         %serialPort
         mount
-        logger = SnisOcsApp.logger();
+        %logger = SnisOcsApp.getLogger();
+        logger = log4m.getLogger();
     end
     
     methods
-        function obj = OCSMount()
-            %obj.mount = XerxesMount(obj.serialPort);
+        function obj = OCSMount(this)
+            %this.mount = XerxesMount(obj.serialPort);
         end
-        
     end
     
     methods (Description='api')
@@ -28,16 +28,17 @@ classdef OCSMount
         end
 
         function out = gotoeq(this, ra, dec)
-            this.logger.info('OCSMount', ['calling: goto(' ra ', ' dec ', ''eq'')']);
+            this.logger.info('OCSMount' + workerinfo(), ['calling: goto(' ra ', ' dec ', ''eq'')']);
             out = true; %this.mount.goto(ra, dec, 'eq')
         end
 
         function out = gotoha(this, ha, dec)
-            this.logger.info('OCSMount', ['calling: goto(' ha ', ' dec ', ''ha'')']);
+            this.logger.info('OCSMount' + workerinfo(), ['calling: goto(' ha ', ' dec ', ''ha'')']);
             out = true; %this.mount.goto(ha, dec, 'ha')
         end
+        
         function out = gotohor(this, az, alt)
-            this.logger.info('OCSMount', ['calling: goto(' az ', ' alt ', ''hor'')']);
+            this.logger.info("OCSMount" + workerinfo(), ['calling: goto(' az ', ' alt ', ''hor'')']);
             out = true; %this.mount.goto(az, alt, 'hor')
         end
 
@@ -107,5 +108,22 @@ classdef OCSMount
             throw(me);
         end
     end
+    
+    methods
+    end
+    
 end
 
+        
+function out = workerinfo()
+    w = getCurrentWorker();
+
+    out = "";
+    if ~isempty(w)
+        if isequal(class(w), 'parallel.cluster.CJSWorker')
+            out = " [pid=" + w.ProcessId + "]";
+        end
+    else
+        out = "[no worker]";
+    end
+end

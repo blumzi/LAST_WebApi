@@ -7,6 +7,10 @@ path = which(mfilename());
 path = path(1:find(path == '/', 1, 'last') - 1);
 path = path(1:find(path == '/', 1, 'last'));
 
+if isempty(gcp('nocreate'))
+    parpool('local');
+end
+    
 config = Simple.Net.HttpServerConfig(path,...
     'port', 5000 ...
     , 'developerMode', true ...

@@ -145,19 +145,58 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                 SnisOcsApp.RaiseInvalidDeviceError(request, "Invalid device '" + requestedDevice + "'. Valid devices are: " + strjoin(keys(deviceMap), ', ') );
             end
             
+            % Unit IDs:
+            %  when requestedDevice is 'mount':  only '1'
+            %  otherwise they must be two-letter strings (e.g. 'ne', 'sw',
+            %  etc.), where the second letter must be the same as
+            %  app.mount_side (either 'e' or 'w')
+            
+            requestedUnit = lower(requestedUnit);
+            if strcmp(requestedDevice, 'mount') && ~strcmp(requestedUnit, '1')
+                SnisOcsApp.RaiseInvalidUnitError(request, ...
+                    "Invalid unitID '" + requestedUnit + "' for device 'mount'. Valid unit ID is: 1");
+            elseif requestedUnit(end) ~= app.mount_side || ~ismember(requestedUnit(end-1), ['n', 's'])
+                SnisOcsApp.RaiseInvalidUnitError(request, ...
+                    "Invalid unitID '" + requestedUnit + "' for device 'mount'. Valid unit IDs are: ",...
+                    strjoin([strcat('n', app.mount_side), strcat('s', app_mount_side)], ', '));
+            end
+            
+                        
+            % 'units' is the dictionary of current units for the requested
+            % device type (e.g. mount, camera, focuser, etc.)
+            
             if isKey(units, requestedUnit)
                 unit = units(requestedUnit);
             else
                 SnisOcsApp.RaiseInvalidUnitError(request, ...
-                    "Invalid unitID '" + requestedUnit + "' for device '" + requestedDevice + "'. Valid units IDs are: [" + strjoin(keys(units), ', ') + "]");
+                    "Invalid unitID '" + requestedUnit + "' for device '" + requestedDevice + "'. Current valid units IDs are: [" + strjoin(keys(units), ', ') + "]");
             end
             
             validMethods = {};
+            methods = {};
             m = metaclass(unit);
             for i = 1:length(m.MethodList())
                 if strcmp(m.MethodList(i).Description, 'api')
                     validMethods{end+1} = m.MethodList(i).Name;
+                    s = "";
+                    mc = m.MethodList(i);
+                    if ~isempty(mc.OutputNames)
+                        s = join(mc.OutputNames, ',') + " = ";
+                    end
+                    s = s + mc.Name + "(";
+                    if numel(mc.InputNames) > 1                     
+                        for j = 2:numel(mc.InputNames)
+                            s = s + mc.InputNames(j) + ',';
+                        end
+                    end
+                    s = strip(s, ',') + ")";
+                    methods{end+1} = s;
                 end
+            end
+            
+            if strcmp(requestedMethod, "methods")
+                output = {methods};
+                return
             end
             
             method = [];
