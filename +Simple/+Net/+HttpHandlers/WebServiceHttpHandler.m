@@ -1,7 +1,7 @@
 classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
     %WEBSERVICEHTTPHANDLER Summary of this class goes here
     %   Detailed explanation goes here
-    
+        
     methods
         function ismatch = matches(this, request, app)
             ismatchOriginal = any(regexp(request.Filename, '^\/?\w+(?:\/\w+)?\/?$'));
@@ -133,7 +133,16 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
         
         
         function output = invokeOcsServiceMethod(this, request, response, app, requestedDevice, requestedUnit, requestedMethod)
-                        
+             
+            [ret, str] = system('hostname -s');
+            if ret == 0
+                str = strrep(str, 'last', '');
+                mount_side = str(end-1);
+                mount_number = str2double(str(1:end-2));
+            else
+                throw(MException('OCS:SnisOcsApp:invokeOcsServiceMethod', 'Cannot get hostname'));
+            end
+            
             deviceMap = containers.Map(...
                 {'mount',            'camera',           'focuser',             'switch'}, ...
                 {app.current.mounts, app.current.cameras, app.current.focusers, app.current.pswitches}...
@@ -152,13 +161,15 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
             %  app.mount_side (either 'e' or 'w')
             
             requestedUnit = lower(requestedUnit);
-            if strcmp(requestedDevice, 'mount') && ~strcmp(requestedUnit, '1')
-                SnisOcsApp.RaiseInvalidUnitError(request, ...
-                    "Invalid unitID '" + requestedUnit + "' for device 'mount'. Valid unit ID is: 1");
-            elseif requestedUnit(end) ~= app.mount_side || ~ismember(requestedUnit(end-1), ['n', 's'])
-                SnisOcsApp.RaiseInvalidUnitError(request, ...
-                    "Invalid unitID '" + requestedUnit + "' for device 'mount'. Valid unit IDs are: ",...
-                    strjoin([strcat('n', app.mount_side), strcat('s', app_mount_side)], ', '));
+            if strcmp(requestedDevice, 'mount')
+                if ~strcmp(requestedUnit, '1')
+                    SnisOcsApp.RaiseInvalidUnitError(request, ...
+                        "Invalid unitID " + requestedUnit + " for device mount. Valid unit ID is: 1");
+                end            
+            elseif requestedUnit(end) ~= mount_side || ~ismember(requestedUnit(end-1), ['n', 's'])
+                err = "Invalid unitID " + requestedUnit + " for device " + requestedDevice + ...
+                    ". Valid unit IDs are: n" + mount_side + ' or s' + mount_side;
+                SnisOcsApp.RaiseInvalidUnitError(request, err);
             end
             
                         
@@ -169,7 +180,7 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                 unit = units(requestedUnit);
             else
                 SnisOcsApp.RaiseInvalidUnitError(request, ...
-                    "Invalid unitID '" + requestedUnit + "' for device '" + requestedDevice + "'. Current valid units IDs are: [" + strjoin(keys(units), ', ') + "]");
+                    "Invalid unitID " + requestedUnit + " for device " + requestedDevice + ". Current valid units IDs are: [" + strjoin(keys(units), ', ') + "]");
             end
             
             validMethods = {};
