@@ -16,8 +16,8 @@ classdef SnisOcsApp < Simple.App.App
         function this = SnisOcsApp()
             [ret, str] = system('hostname -s');
             if ret == 0
-                this.hostname = str;
-                str = strrep(str, 'last', '');
+                this.hostname = str(1:end-1);
+                str = strrep(this.hostname, 'last', '');
                 this.mount_side = str(end);
                 this.mount_number = str2double(str(1:end-1));
             else
