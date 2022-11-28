@@ -149,7 +149,7 @@ classdef HttpServer < handle
                         this.config, ...
                         workerQueueConstant);
                     
-                this.log(['Async Webserver Available on http://localhost:' num2str(this.config.port) '/'], '', this.LogTypes.Debug);
+                this.log(['Async Webserver Available on http://0.0.0.0:' num2str(this.config.port) '/'], '', this.LogTypes.Debug);
             else
                 ex = MException('SNIS:CantStartAsync', 'Can''t activate server asynchronously with an empty parpool');
                 throw(ex);
@@ -192,7 +192,7 @@ classdef HttpServer < handle
             %METHOD1 Summary of this method goes here
             %   Detailed explanation goes here
 
-            this.log(['Webserver Available on http://localhost:' num2str(this.config.port) '/'], '', this.LogTypes.Debug);
+            this.log(['Webserver Available on http://0.0.0.0:' num2str(this.config.port) '/'], '', this.LogTypes.Debug);
             
             while(true)
                 % Raise before listen event
