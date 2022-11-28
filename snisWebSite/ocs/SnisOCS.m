@@ -7,9 +7,11 @@ path = which(mfilename());
 path = path(1:find(path == '/', 1, 'last') - 1);
 path = path(1:find(path == '/', 1, 'last'));
 
-if isempty(gcp('nocreate'))
-    parpool('local');
+pool = gcp('nocreate');
+if isempty(pool)
+    pool = parpool('local');
 end
+pool.IdleTimeout = Inf;
     
 config = Simple.Net.HttpServerConfig(path,...
     'port', 5000 ...
@@ -21,5 +23,5 @@ config = Simple.Net.HttpServerConfig(path,...
 server = Simple.Net.HttpServer(config);
     
 %% 
-server.start().listen();
-%server.startAsync();
+%server.start().listen();
+server.startAsync();
