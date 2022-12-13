@@ -6,7 +6,7 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
         function ismatch = matches(this, request, app)
             ismatchOriginal = any(regexp(request.Filename, '^\/?\w+(?:\/\w+)?\/?$'));
             ismatchOcs = any(regexp(request.Filename, ...
-                '\/?(api)\/(v\d+)\/((mount|focuser|camera|switch))\/(\d+|[NnSs][WwEe])\/(\w+)'));
+                '\/?(api)\/(v\d+)\/((' + strjoin(obs.api.Equipment.Aliases, '|') + '))\/(\d+|[NnSs][WwEe])\/(\w+)'));
             ismatch = ismatchOriginal | ismatchOcs;
         end
         
@@ -143,15 +143,17 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                 throw(MException('OCS:SnisOcsApp:invokeOcsServiceMethod', 'Cannot get hostname'));
             end
             
-            deviceMap = containers.Map(...
-                {'mount',            'camera',           'focuser',             'switch'}, ...
-                {app.current.mounts, app.current.cameras, app.current.focusers, app.current.pswitches}...
-                );
-            
-            if isKey(deviceMap, requestedDevice)            
-                units = deviceMap(requestedDevice);
+            if obs.api.Equipment.isMount(requestedDevice)
+                units = app.current.Mounts;
+            elseif obs.api.Equipment.isCamera(requestedDevice)
+                units = app.current.Cameras;
+            elseif obs.api.Equipment.isFocuser(requestedDevice)
+                units = app.current.Focusers;
+            elseif obs.api.Equipment.isSwitch(requestedDevice)
+                units = app.current.Switches;
             else
-                SnisOcsApp.RaiseInvalidDeviceError(request, "Invalid device '" + requestedDevice + "'. Valid devices are: " + strjoin(keys(deviceMap), ', ') );
+                SnisOcsApp.RaiseInvalidDeviceError(request, ...
+                    "Invalid device '" + requestedDevice + "'. Valid devices are: " + strjoin(obs.api.Equipment.Aliases, ', ') );
             end
             
             % Unit IDs:
@@ -160,15 +162,25 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
             %  etc.), where the second letter must be the same as
             %  app.mount_side (either 'e' or 'w')
             
-            requestedUnit = lower(requestedUnit);
-            if strcmp(requestedDevice, 'mount')
-                if ~strcmp(requestedUnit, '1')
+            if mount_side == 'e'
+                valid_units = [1, 2];
+            elseif mount_side == 'w'
+                valid_units = [3, 4];
+            end
+            
+            requestedUnit = str2num(requestedUnit);
+            if obs.api.Equipment.isMount(requestedDevice)
+                if requestedUnit ~= 1
                     SnisOcsApp.RaiseInvalidUnitError(request, ...
-                        "Invalid unitID " + requestedUnit + " for device mount. Valid unit ID is: 1");
+                        "Invalid unitID " + requestedUnit + " for device '" + requestedDevice  + "'. Valid unit ID is: 1");
                 end            
-            elseif requestedUnit(end) ~= mount_side || ~ismember(requestedUnit(end-1), ['n', 's'])
+            elseif mount_side == 'e' && ~ismember(requestedUnit, valid_units)
                 err = "Invalid unitID " + requestedUnit + " for device " + requestedDevice + ...
-                    ". Valid unit IDs are: n" + mount_side + ' or s' + mount_side;
+                    ". Valid unit IDs are: [1, 2]";
+                SnisOcsApp.RaiseInvalidUnitError(request, err);            
+            elseif mount_side == 'w' && ~ismember(requestedUnit, valid_units)
+                err = "Invalid unitID " + requestedUnit + " for device " + requestedDevice + ...
+                    ". Valid unit IDs are: [3, 4]";
                 SnisOcsApp.RaiseInvalidUnitError(request, err);
             end
             
@@ -176,11 +188,14 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
             % 'units' is the dictionary of current units for the requested
             % device type (e.g. mount, camera, focuser, etc.)
             
-            if isKey(units, requestedUnit)
+            if mount_side == 'e' && ismember(requestedUnit, valid_units)
                 unit = units(requestedUnit);
+            elseif mount_side == 'w' && ismember(requestedUnit, valid_units)
+                unit = units(requestedUnit - 2);
             else
                 SnisOcsApp.RaiseInvalidUnitError(request, ...
-                    "Invalid unitID " + requestedUnit + " for device " + requestedDevice + ". Current valid units IDs are: [" + strjoin(keys(units), ', ') + "]");
+                    "Invalid unitID '" + requestedUnit + "' for device " + requestedDevice + ...
+                    ". Current valid units IDs are: [" + strjoin(string(valid_units), ', ') + "]");
             end
             
             validMethods = {};

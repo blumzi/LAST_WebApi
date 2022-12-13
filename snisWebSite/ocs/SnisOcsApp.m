@@ -2,43 +2,43 @@
 classdef SnisOcsApp < Simple.App.App
     
     properties
-        mounts
-        cameras
-        pswitches
-        focusers
+        Mounts
+        Cameras
+        Pswitches
+        Focusers
         
-        hostname
-        mount_number
-        mount_side
+        Hostname
+        Mount_number
+        Mount_side
     end
     
     methods
-        function this = SnisOcsApp()
+        function Obj = SnisOcsApp()
             [ret, str] = system('hostname -s');
             if ret == 0
-                this.hostname = str(1:end-1);
-                str = strrep(this.hostname, 'last', '');
-                this.mount_side = str(end);
-                this.mount_number = str2double(str(1:end-1));
+                Obj.Hostname = str(1:end-1);
+                str = strrep(Obj.Hostname, 'last', '');
+                Obj.Mount_side = str(end);
+                Obj.Mount_number = str2double(str(1:end-1));
             else
                 throw(MException('OCS:SnisOcsApp', 'Cannot get hostname'));
             end
             
-            this.mounts     = containers.Map({'1'},         {OCSMount()});
-            this.cameras    = containers.Map({'ne', 'se'},  {OCSCamera(),       OCSCamera()});   % TODO: use numeral keys as well
-            this.pswitches  = containers.Map({'ne', 'se'},  {OCSPowerSwitch(),  OCSPowerSwitch()});
-            this.focusers   = containers.Map({'ne', 'se'},  {OCSFocuser(),      OCSFocuser()});
+            Obj.Mounts     = [ OCSMount() ];
+            Obj.Cameras    = [ OCSCamera(), OCSCamera() ];
+            Obj.Pswitches  = [ OCSPowerSwitch(), OCSPowerSwitch() ];
+            Obj.Focusers   = [ OCSFocuser(), OCSFocuser() ];
         end
     end
     
     methods (Access=protected)
         
         % Overriding load method to register AppControllers
-        function load(this)
-            this.load@Simple.App.App();
+        function load(Obj)
+            Obj.load@Simple.App.App();
             
             % Register proof of concept controller
-            this.registerController(Simple.App.AppControllerBuilder('ocs',@OcsController));
+            Obj.registerController(Simple.App.AppControllerBuilder('ocs',@OcsController));
         end
     end
     

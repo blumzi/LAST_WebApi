@@ -489,7 +489,7 @@ classdef HttpServer < handle
         end
         
         function logger = getLogger(this)
-            fullpath = ['/var/log/ocs/api/info_' datestr(now, 'yyyy-mm-dd') '.log'];
+            fullpath = ['/var/log/ocs/api/server/' datestr(now, 'yyyy-mm-dd') '.log'];
             [parent, ~, ~] = fileparts(fullpath);
             [~, ~] = mkdir(parent);
             logger = log4m.getLogger(fullpath);
