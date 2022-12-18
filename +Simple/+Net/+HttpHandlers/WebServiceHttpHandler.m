@@ -5,8 +5,10 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
     methods
         function ismatch = matches(this, request, app)
             ismatchOriginal = any(regexp(request.Filename, '^\/?\w+(?:\/\w+)?\/?$'));
+            
+            eq = obs.api.Equipment;
             ismatchOcs = any(regexp(request.Filename, ...
-                '\/?(api)\/(v\d+)\/((' + strjoin(obs.api.Equipment.Aliases, '|') + '))\/(\d+|[NnSs][WwEe])\/(\w+)'));
+                '\/?(api)\/(v\d+)\/((' + strjoin(eq.Aliases, '|') + '))\/(\d+|[NnSs][WwEe])\/(\w+)'));
             ismatch = ismatchOriginal | ismatchOcs;
         end
         
@@ -136,24 +138,27 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
              
             [ret, str] = system('hostname -s');
             if ret == 0
-                str = strrep(str, 'last', '');
-                mount_side = str(end-1);
-                mount_number = str2double(str(1:end-2));
+                str = strrep(str(1:end-1), 'last', '');
+                mount_side = str(end);
+                mount_number = str2double(str(1:end-1));
             else
                 throw(MException('OCS:SnisOcsApp:invokeOcsServiceMethod', 'Cannot get hostname'));
             end
             
-            if obs.api.Equipment.isMount(requestedDevice)
-                units = app.current.Mounts;
-            elseif obs.api.Equipment.isCamera(requestedDevice)
-                units = app.current.Cameras;
-            elseif obs.api.Equipment.isFocuser(requestedDevice)
-                units = app.current.Focusers;
-            elseif obs.api.Equipment.isSwitch(requestedDevice)
-                units = app.current.Switches;
-            else
-                SnisOcsApp.RaiseInvalidDeviceError(request, ...
-                    "Invalid device '" + requestedDevice + "'. Valid devices are: " + strjoin(obs.api.Equipment.Aliases, ', ') );
+            eq = obs.api.Equipment();
+            eqtype = eq.match(requestedDevice);
+            switch eqtype
+                case eq.Mount
+                    units = app.current.Mounts;
+                case eq.Camera
+                    units = app.current.Cameras;
+                case eq.Focuser
+                    units = app.current.Focusers;
+                case eq.Switch
+                    units = app.current.Switches;
+                otherwise
+                    SnisOcsApp.RaiseInvalidDeviceError(request, ...
+                        "Invalid device '" + requestedDevice + "'. Valid devices are: " + strjoin(eq.Aliases, ', ') );
             end
             
             % Unit IDs:
@@ -169,18 +174,18 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
             end
             
             requestedUnit = str2num(requestedUnit);
-            if obs.api.Equipment.isMount(requestedDevice)
+            if eqtype == eq.Mount
                 if requestedUnit ~= 1
                     SnisOcsApp.RaiseInvalidUnitError(request, ...
                         "Invalid unitID " + requestedUnit + " for device '" + requestedDevice  + "'. Valid unit ID is: 1");
                 end            
             elseif mount_side == 'e' && ~ismember(requestedUnit, valid_units)
                 err = "Invalid unitID " + requestedUnit + " for device " + requestedDevice + ...
-                    ". Valid unit IDs are: [1, 2]";
+                    ". Valid unit IDs are: " + strjoin(string(valid_units), ", ");
                 SnisOcsApp.RaiseInvalidUnitError(request, err);            
             elseif mount_side == 'w' && ~ismember(requestedUnit, valid_units)
                 err = "Invalid unitID " + requestedUnit + " for device " + requestedDevice + ...
-                    ". Valid unit IDs are: [3, 4]";
+                    ". Valid unit IDs are: " + strjoin(string(valid_units), ", ");
                 SnisOcsApp.RaiseInvalidUnitError(request, err);
             end
             
@@ -244,6 +249,7 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
             inArgs = this.mapMethodArguments(request, method);
 
             % Invoke controller's method  
+            % TBD: semaphore?
             [outArgs{:}] = unit.(method.Name)(inArgs{:});
                 
             

@@ -1,4 +1,4 @@
-classdef OCSFocuser
+classdef Focuser
     %OCSMOUNT Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -8,7 +8,7 @@ classdef OCSFocuser
     end
     
     methods (Description='api')
-        function obj = OCSFocuser()
+        function obj = Focuser()
             %OCFOCUSER Construct an instance of this class
             %   Detailed explanation goes here
 %             obj.serialPort = serialPort;

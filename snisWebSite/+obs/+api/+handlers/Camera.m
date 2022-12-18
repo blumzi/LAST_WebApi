@@ -1,4 +1,4 @@
-classdef OCSCamera
+classdef Camera
     %OCSMOUNT Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -8,7 +8,7 @@ classdef OCSCamera
     end
     
     methods (Description='api')
-        function obj = OCSCamera()
+        function obj = Camera()
             %OCFOCUSER Construct an instance of this class
             %   Detailed explanation goes here
 %             obj.serialPort = serialPort;

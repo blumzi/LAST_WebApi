@@ -1,4 +1,4 @@
-classdef OCSPowerSwitch
+classdef PowerSwitch
     %OCSMOUNT Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -8,7 +8,7 @@ classdef OCSPowerSwitch
     end
     
     methods (Description='api')
-        function obj = OCSPowerSwitch()
+        function obj = PowerSwitch()
             %OCSMOUNT Construct an instance of this class
             %   Detailed explanation goes here
             %obj.mount = XerxesMount(obj.serialPort);

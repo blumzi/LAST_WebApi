@@ -1,4 +1,4 @@
-classdef OCSMount
+classdef Mount
     %OCSMOUNT Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -10,50 +10,51 @@ classdef OCSMount
     end
     
     methods
-        function obj = OCSMount(this)
+        function obj = Mount(this)
             %this.mount = XerxesMount(obj.serialPort);
         end
     end
     
     methods (Description='api')
         
-        function out = slewing(this)
-            this.logger.info('OCSMount', 'calling: slewing()')
-            out = true; % this.mount.Slewing;
+        function tf = slewing(this)
+            this.logger.info('Mount', 'calling: slewing()')
+            tf = Obj.mount.slewing();
+            % out = true; % this.mount.Slewing;
         end
         
         function out = park(this)
-            this.logger.info('OCSMount', 'calling: park()');
+            this.logger.info('Mount', 'calling: park()');
             out = true; %this.mount.park();
         end
 
         function out = gotoeq(this, ra, dec)
-            this.logger.info('OCSMount' + workerinfo(), ['calling: goto(' ra ', ' dec ', ''eq'')']);
+            this.logger.info('Mount' + workerinfo(), ['calling: goto(' ra ', ' dec ', ''eq'')']);
             out = true; %this.mount.goto(ra, dec, 'eq')
         end
 
         function out = gotoha(this, ha, dec)
-            this.logger.info('OCSMount' + workerinfo(), ['calling: goto(' ha ', ' dec ', ''ha'')']);
+            this.logger.info('Mount' + workerinfo(), ['calling: goto(' ha ', ' dec ', ''ha'')']);
             out = true; %this.mount.goto(ha, dec, 'ha')
         end
         
         function out = gotohor(this, az, alt)
-            this.logger.info("OCSMount" + workerinfo(), ['calling: goto(' az ', ' alt ', ''hor'')']);
+            this.logger.info("Mount" + workerinfo(), ['calling: goto(' az ', ' alt ', ''hor'')']);
             out = true; %this.mount.goto(az, alt, 'hor')
         end
 
         function out = status(this)
-            this.logger.info('OCSMount', 'calling: status()');
+            this.logger.info('Mount', 'calling: status()');
             out = 'STATUS'; % this.mount.status();
         end
         
         function tf = tracking(this)
-            this.logger.info('OCSMount', 'calling: tracking()');
+            this.logger.info('Mount', 'calling: tracking()');
             tf = true; % this.mount.tracking;
         end
         
         function tf = abortslew(this)
-            this.logger.info('OCSMount', 'calling: abortslew()');
+            this.logger.info('Mount', 'calling: abortslew()');
             tf = true; % this.mount.abortslew();
         end
         

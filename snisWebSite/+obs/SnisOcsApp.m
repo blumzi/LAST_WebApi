@@ -24,10 +24,10 @@ classdef SnisOcsApp < Simple.App.App
                 throw(MException('OCS:SnisOcsApp', 'Cannot get hostname'));
             end
             
-            Obj.Mounts     = [ OCSMount() ];
-            Obj.Cameras    = [ OCSCamera(), OCSCamera() ];
-            Obj.Pswitches  = [ OCSPowerSwitch(), OCSPowerSwitch() ];
-            Obj.Focusers   = [ OCSFocuser(), OCSFocuser() ];
+            Obj.Mounts     = [ obs.api.handlers.Mount() ];
+            Obj.Cameras    = [ obs.api.handlers.Camera(),       obs.api.handlers.Camera() ];
+            Obj.Pswitches  = [ obs.api.handlers.PowerSwitch(),  obs.api.handlers.PowerSwitch() ];
+            Obj.Focusers   = [ obs.api.handlers.Focuser(),      obs.api.handlers.Focuser() ];
         end
     end
     

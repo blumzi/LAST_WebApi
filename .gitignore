@@ -2,4 +2,5 @@
 resources/
 *.asv
 *.swp
+*.log
 snisWebSite/log
