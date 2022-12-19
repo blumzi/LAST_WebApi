@@ -149,17 +149,24 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
             eqtype = eq.match(requestedDevice);
             switch eqtype
                 case eq.Mount
-                    units = app.current.Mounts;
+                    units = app.Mounts;
                 case eq.Camera
-                    units = app.current.Cameras;
+                    units = app.Cameras;
                 case eq.Focuser
-                    units = app.current.Focusers;
+                    units = app.Focusers;
                 case eq.Switch
-                    units = app.current.Switches;
+                    units = app.Switches;
+                case eq.Unit
+                    units = app.Units;
                 otherwise
                     SnisOcsApp.RaiseInvalidDeviceError(request, ...
                         "Invalid device '" + requestedDevice + "'. Valid devices are: " + strjoin(eq.Aliases, ', ') );
             end
+            
+            if isempty(units)
+                throw(MException('OCS:SnisOcsApp:invokeOcsServiceMethod', sprintf("No units of type '%s'", eqtype)));
+            end
+                
             
             % Unit IDs:
             %  when requestedDevice is 'mount':  only '1'

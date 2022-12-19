@@ -26,5 +26,5 @@ config = Simple.Net.HttpServerConfig('.',...
 server = Simple.Net.HttpServer(config);
     
 %% 
-%server.start().listen();
-server.startAsync();
+server.start().listen();
+%server.startAsync();

@@ -1,15 +1,15 @@
-
 classdef SnisOcsApp < Simple.App.App
     
     properties
         Mounts
         Cameras
-        Pswitches
+        PowerSwitches
         Focusers
+        Units
         
         Hostname
-        Mount_number
-        Mount_side
+        MountNumber
+        MountSide
     end
     
     methods
@@ -18,16 +18,37 @@ classdef SnisOcsApp < Simple.App.App
             if ret == 0
                 Obj.Hostname = str(1:end-1);
                 str = strrep(Obj.Hostname, 'last', '');
-                Obj.Mount_side = str(end);
-                Obj.Mount_number = str2double(str(1:end-1));
+                Obj.MountSide = str(end);
+                Obj.MountNumber = str2double(str(1:end-1));
             else
                 throw(MException('OCS:SnisOcsApp', 'Cannot get hostname'));
             end
             
-            Obj.Mounts     = [ obs.api.handlers.Mount() ];
-            Obj.Cameras    = [ obs.api.handlers.Camera(),       obs.api.handlers.Camera() ];
-            Obj.Pswitches  = [ obs.api.handlers.PowerSwitch(),  obs.api.handlers.PowerSwitch() ];
-            Obj.Focusers   = [ obs.api.handlers.Focuser(),      obs.api.handlers.Focuser() ];
+            if Obj.MountSide == "e"
+                EquipLocation = [ 1, 2 ];
+            else
+                EquipLocation = [ 3, 4 ];
+            end
+            
+            Node = obs.api.Node();
+            MountLocation = "LAST." + string(Node.NodeId) + "." + Obj.MountNumber;
+            Obj.Mounts     = [ obs.api.wrapper.Mount('Location', MountLocation) ];
+%             Obj.Cameras    = [ ...
+%                 obs.api.wrapper.Camera('Location', sprintf("%s.%s%d", MountLocation, "cam", EquipLocation(1))), ...
+%                 obs.api.wrapper.Camera('Location', sprintf("%s.%s%d", MountLocation, "cam", EquipLocation(2)))  ...
+%             ];       
+%             Obj.PowerSwitches    = [ ...
+%                 obs.api.wrapper.PowerSwitch('Location', sprintf("%s.%s%d", MountLocation, "switch", EquipLocation(1))), ...
+%                 obs.api.wrapper.PowerSwitch('Location', sprintf("%s.%s%d", MountLocation, "switch", EquipLocation(2)))  ...
+%             ]; 
+            Obj.Focusers    = [ ...
+                obs.api.wrapper.Focuser('Location', sprintf("%s.%s%d", MountLocation, "foc", EquipLocation(1))), ...
+                obs.api.wrapper.Focuser('Location', sprintf("%s.%s%d", MountLocation, "foc", EquipLocation(2)))  ...
+            ];  
+%             Obj.Units    = [ ...
+%                 obs.api.wrapper.Unit('Location', sprintf("%s.%s%d", MountLocation, "unit", EquipLocation(1))), ...
+%                 obs.api.wrapper.Unit('Location', sprintf("%s.%s%d", MountLocation, "unit", EquipLocation(2)))  ...
+%             ];
         end
     end
     
