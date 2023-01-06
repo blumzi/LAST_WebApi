@@ -129,7 +129,7 @@ classdef HttpRequest < handle
                             this.Content.(subdata.Name).ContentData=subdata.ContentData;
                         end
                     otherwise
-                        disp('unknown')
+                        fprintf("parseContent: this.ContentType.Type: '%s'\n", this.ContentType.Type);
                 end
             end
         end
@@ -194,7 +194,7 @@ classdef HttpRequest < handle
                                 str=request_words{i}{3};
                                 this.ContentType.Boundary=str(10:end);
                             otherwise
-                                disp('unknown')
+                                fprintf("parseHeader: content-type: '%s', not handled\n", rmvp(request_words{i}{2}));
                         end
                     case {'set-cookie:', 'cookie:'}
                         cookies = strsplit(rmvp(line(find(line==':', 1, 'first')+1:end)), '; ');

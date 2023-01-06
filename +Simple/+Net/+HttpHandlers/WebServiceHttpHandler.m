@@ -123,6 +123,32 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                 args{i-1} = request.get(argName);
             end
         end
+                
+        function args = mapPropertyArguments(this, request)
+            args = [];
+            value = request.get('Value');
+            if ~isempty(value)
+                args.Value = value;
+            end
+        end
+        
+        function args = mapMethodArgumentsToStruct(this, request, methodMC)
+            nargs = length(methodMC.InputNames);
+            args = cell(1, nargs*2);
+            
+            for i = 2:2:nargs
+                % For each method parameter, search it first in post
+                % content and second in query string to get the value,
+                % otherwise put and empty vector.
+                fieldName = methodMC.InputNames{i};
+                fieldValue = request.get(fieldName);
+                %args(i-1).(fieldName) = fieldValue;
+                args(i-1) = {fieldName};
+                args(i) = {fieldValue};
+%                 argName = methodMC.InputNames{i};
+%                 args{i-1} = request.get(argName);
+            end
+        end
         
         function controller = getOcsController(this, request, app, controllerName)
             try
@@ -159,7 +185,7 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                 case eq.Unit
                     units = app.Units;
                 otherwise
-                    SnisOcsApp.RaiseInvalidDeviceError(request, ...
+                    obs.SnisOcsApp.RaiseInvalidDeviceError(request, ...
                         "Invalid device '" + requestedDevice + "'. Valid devices are: " + strjoin(eq.Aliases, ', ') );
             end
             
@@ -183,88 +209,90 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
             requestedUnit = str2num(requestedUnit);
             if eqtype == eq.Mount
                 if requestedUnit ~= 1
-                    SnisOcsApp.RaiseInvalidUnitError(request, ...
+                    obs.SnisOcsApp.RaiseInvalidUnitError(request, ...
                         "Invalid unitID " + requestedUnit + " for device '" + requestedDevice  + "'. Valid unit ID is: 1");
                 end            
             elseif mount_side == 'e' && ~ismember(requestedUnit, valid_units)
                 err = "Invalid unitID " + requestedUnit + " for device " + requestedDevice + ...
                     ". Valid unit IDs are: " + strjoin(string(valid_units), ", ");
-                SnisOcsApp.RaiseInvalidUnitError(request, err);            
+                obs.SnisOcsApp.RaiseInvalidUnitError(request, err);            
             elseif mount_side == 'w' && ~ismember(requestedUnit, valid_units)
                 err = "Invalid unitID " + requestedUnit + " for device " + requestedDevice + ...
                     ". Valid unit IDs are: " + strjoin(string(valid_units), ", ");
-                SnisOcsApp.RaiseInvalidUnitError(request, err);
+                obs.SnisOcsApp.RaiseInvalidUnitError(request, err);
             end
             
                         
             % 'units' is the dictionary of current units for the requested
-            % device type (e.g. mount, camera, focuser, etc.)
+            %   device type (e.g. mount, camera, focuser, etc.)
             
             if mount_side == 'e' && ismember(requestedUnit, valid_units)
                 unit = units(requestedUnit);
             elseif mount_side == 'w' && ismember(requestedUnit, valid_units)
                 unit = units(requestedUnit - 2);
             else
-                SnisOcsApp.RaiseInvalidUnitError(request, ...
+                obs.SnisOcsApp.RaiseInvalidUnitError(request, ...
                     "Invalid unitID '" + requestedUnit + "' for device " + requestedDevice + ...
                     ". Current valid units IDs are: [" + strjoin(string(valid_units), ', ') + "]");
             end
             
-            validMethods = {};
-            methods = {};
-            m = metaclass(unit);
-            for i = 1:length(m.MethodList())
-                if strcmp(m.MethodList(i).Description, 'api')
-                    validMethods{end+1} = m.MethodList(i).Name;
-                    s = "";
-                    mc = m.MethodList(i);
-                    if ~isempty(mc.OutputNames)
-                        s = join(mc.OutputNames, ',') + " = ";
-                    end
-                    s = s + mc.Name + "(";
-                    if numel(mc.InputNames) > 1                     
-                        for j = 2:numel(mc.InputNames)
-                            s = s + mc.InputNames(j) + ',';
-                        end
-                    end
-                    s = strip(s, ',') + ")";
-                    methods{end+1} = s;
-                end
+            if strcmp(requestedMethod, "properties")
+                output = { unit.WrappedProperties.keys };
+                return;
             end
             
             if strcmp(requestedMethod, "methods")
-                output = {methods};
+                keys = unit.WrappedMethods.keys;
+                
+                output = strings(1, numel(keys));
+                for i = 1:numel(keys)
+                    output(i) = unit.WrappedMethods(keys{i}).Signature;
+                end
                 return
             end
             
-            method = [];
-            for i = 1:length(m.MethodList())
-                if strcmp(requestedMethod, m.MethodList(i).Name)
-                    method = m.MethodList(i);
-                    break;
-                end
-            end
-            
-            if isempty(method)
-                SnisOcsApp.RaiseInvalidMethodError(request, ...
-                    "Invalid method '" + requestedMethod + "' for device '" + requestedDevice + "'. Valid methods are: [" + strjoin(validMethods, ', ') + "]");
-            end
-            
-            % Prepare in/out arguments
-            nOutArgs = length(method.OutputNames);
-            outArgs = cell(1, nOutArgs);
-            inArgs = this.mapMethodArguments(request, method);
-
-            % Invoke controller's method  
-            % TBD: semaphore?
-            [outArgs{:}] = unit.(method.Name)(inArgs{:});
+            if unit.isWrappedProperty(requestedMethod)
+                property = unit.WrappedProperties(requestedMethod);
+                outArgs = cell(1, 1);
+                inArgs = this.mapPropertyArguments(request);
                 
-            
-            % return output arguments as a struct (which can be serialized
-            % easily)
-            for oai = 1:nOutArgs
-                output.(method.OutputNames{oai}) = outArgs{oai};
+                if isfield(inArgs, 'Value')
+                    unit.(property.Name) = inArgs(Value);   % run the property setter
+                else                    
+                    [outArgs{:}] = unit.(property.Name);    % run the property getter
+                    output = outArgs{1};
+                end
+                return;
             end
+            
+            % Handle methods
+            if unit.isWrappedMethod(requestedMethod)
+                method = unit.WrappedMethods(requestedMethod);
+            
+                % Prepare in/out arguments
+                nOutArgs = length(method.OutputNames);
+                outArgs = cell(1, nOutArgs);
+                %inArgs = this.mapMethodArguments(request, method);
+                %inArgs = cell(1, length(method.InputNames) - 1);
+                inArgs = this.mapMethodArgumentsToStruct(request, method);
+
+                % Invoke controller's method                 
+                [outArgs{:}] = unit.(method.Name)(inArgs{:});
+
+
+                % return output arguments as a struct (which can be serialized
+                % easily)
+                for oai = 1:nOutArgs
+                    output.(method.OutputNames{oai}) = outArgs{oai};
+                end
+                return;
+            end
+            
+            obs.SnisOcsApp.RaiseInvalidMethodError(request, ...
+                "Invalid property/method '" + requestedMethod + "' for device '" + requestedDevice + ...
+                "'. Valid properties are: [" + strjoin(unit.WrappedProperties.keys, ', ') + "]." + ...
+                "'. Valid methods are: [" + strjoin(unit.WrappedMethods.keys, ', ') + "]." ...
+                );
         end
     end
     

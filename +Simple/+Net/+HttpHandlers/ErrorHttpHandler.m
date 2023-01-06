@@ -38,7 +38,7 @@ classdef ErrorHttpHandler < Simple.Net.HttpHandlers.FileTypeHttpHandler
             if ~isempty(this.errorToHandle); ex = this.errorToHandle; else; ex = lasterror; end
             
             response = request.Response;
-            isOcs = strcmp(class(app), 'SnisOcsApp');
+            isOcs = strcmp(class(app), 'obs.SnisOcsApp');
             
             % prepare error details
             status = 500;
@@ -69,12 +69,11 @@ classdef ErrorHttpHandler < Simple.Net.HttpHandlers.FileTypeHttpHandler
             % Handle error for web service response
             else
                 if isOcs
-                    response.Status = 200;
                     response.ContentType='application/json; charset=UTF-8';
-                    body = jsonencode(struct('Value', string(nan)...
-                        , 'ErrorId', err.identifier...
-                        , 'ErrorMessage', err.message...
-                        , 'ErrorReport', err.report));
+                    body = jsonencode(struct(...
+                        'Value', string(nan),   ...
+                        'Error', err)           ...
+                    );
                 else
                     response.ContentType='application/xml; charset=UTF-8';
                     responseSimple.Net.Envelope = Simple.Net.Envelope.Error(status, err, []);
