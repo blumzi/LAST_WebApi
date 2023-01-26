@@ -6,9 +6,8 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
         function ismatch = matches(this, request, app)
             ismatchOriginal = any(regexp(request.Filename, '^\/?\w+(?:\/\w+)?\/?$'));
             
-            eq = obs.api.Equipment;
             ismatchOcs = any(regexp(request.Filename, ...
-                '\/?(api)\/(v\d+)\/((' + strjoin(eq.Aliases, '|') + '))\/(\d+|[NnSs][WwEe])\/(\w+)'));
+                '\/?(api)\/(v\d+)\/((' + strjoin(obs.api.Equipment.validWords, '|') + '))\/(\d+|[NnSs][WwEe])\/(\w+)'));
             ismatch = ismatchOriginal | ismatchOcs;
         end
         
@@ -39,11 +38,19 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                     device = serviceUrlParts{4};
                     unitId = serviceUrlParts{5};
                     method = serviceUrlParts{6};
-                    output = this.invokeOcsServiceMethod(request, response, app, device, unitId, method);
-                    response.write(jsonencode(struct('Value', output...
-                        , 'ErrorId', string(nan)...
-                        , 'ErrorMessage', string(nan)...
-                        , 'ErrorReport', string(nan))));
+                    try
+                        output = this.invokeOcsServiceMethod(request, response, app, device, unitId, method);
+                        response.write(jsonencode(struct('Value', output...
+                            , 'ErrorId', string(nan)...
+                            , 'ErrorMessage', string(nan)...
+                            , 'ErrorReport', string(nan))));
+                    catch ex
+                        response.write(jsonencode(struct('Value', string(nan)...
+                            , 'ErrorId', ex.identifier ...
+                            , 'ErrorMessage', ex.message...
+                            , 'ErrorReport', ex.getReport)));
+                        return;
+                    end
                 else
                     response.ContentType='application/xml; charset=UTF-8';
                     output = this.invokeServiceMethod(request, response, app, serviceUrlParts{1}, serviceUrlParts{2});
@@ -132,19 +139,18 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
             end
         end
         
-        function args = mapMethodArgumentsToStruct(this, request, methodMC)
-            nargs = length(methodMC.InputNames);
-            args = cell(1, nargs*2);
+        function args = mapOcsMethodArguments(this, request, methodMC)
+            nargs = length(methodMC.InputNames) - 1; % First arg is Obj, ignore it.
+            args = cell(1, nargs);
             
-            for i = 2:2:nargs
+            for i = 2:nargs+1
                 % For each method parameter, search it first in post
                 % content and second in query string to get the value,
                 % otherwise put and empty vector.
                 fieldName = methodMC.InputNames{i};
                 fieldValue = request.get(fieldName);
                 %args(i-1).(fieldName) = fieldValue;
-                args(i-1) = {fieldName};
-                args(i) = {fieldValue};
+                args(i-1) = {fieldValue};
 %                 argName = methodMC.InputNames{i};
 %                 args{i-1} = request.get(argName);
             end
@@ -171,22 +177,21 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                 throw(MException('OCS:SnisOcsApp:invokeOcsServiceMethod', 'Cannot get hostname'));
             end
             
-            eq = obs.api.Equipment();
-            eqtype = eq.match(requestedDevice);
+            eqtype = obs.api.Equipment.lookup('Str', requestedDevice);
             switch eqtype
-                case eq.Mount
+                case obs.api.Equipment.Mount
                     units = app.Mounts;
-                case eq.Camera
+                case obs.api.Equipment.Camera
                     units = app.Cameras;
-                case eq.Focuser
+                case obs.api.Equipment.Focuser
                     units = app.Focusers;
-                case eq.Switch
+                case obs.api.Equipment.Switch
                     units = app.Switches;
-                case eq.Unit
+                case obs.api.Equipment.Unit
                     units = app.Units;
                 otherwise
                     obs.SnisOcsApp.RaiseInvalidDeviceError(request, ...
-                        "Invalid device '" + requestedDevice + "'. Valid devices are: " + strjoin(eq.Aliases, ', ') );
+                        "Invalid device '" + requestedDevice + "'. Valid devices are: " + strjoin(obs.api.Equipment.validWords, ', ') );
             end
             
             if isempty(units)
@@ -206,8 +211,8 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                 valid_units = [3, 4];
             end
             
-            requestedUnit = str2num(requestedUnit);
-            if eqtype == eq.Mount
+            requestedUnit = str2num(requestedUnit); %#ok<*ST2NM>
+            if eqtype == obs.api.Equipment.Mount
                 if requestedUnit ~= 1
                     obs.SnisOcsApp.RaiseInvalidUnitError(request, ...
                         "Invalid unitID " + requestedUnit + " for device '" + requestedDevice  + "'. Valid unit ID is: 1");
@@ -237,16 +242,14 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
             end
             
             if strcmp(requestedMethod, "properties")
-                output = { unit.WrappedProperties.keys };
+                output = unit.WrappedPropertyNames;
                 return;
             end
             
             if strcmp(requestedMethod, "methods")
-                keys = unit.WrappedMethods.keys;
-                
-                output = strings(1, numel(keys));
-                for i = 1:numel(keys)
-                    output(i) = unit.WrappedMethods(keys{i}).Signature;
+                output = strings(1, numel(unit.WrappedMethodSignatures));
+                for i = 1:numel(unit.WrappedMethodSignatures)
+                    output(i) = unit.WrappedMethodSignatures(i);
                 end
                 return
             end
@@ -274,14 +277,12 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                 outArgs = cell(1, nOutArgs);
                 %inArgs = this.mapMethodArguments(request, method);
                 %inArgs = cell(1, length(method.InputNames) - 1);
-                inArgs = this.mapMethodArgumentsToStruct(request, method);
-
-                % Invoke controller's method                 
+                inArgs = this.mapOcsMethodArguments(request, method);
+                 
                 [outArgs{:}] = unit.(method.Name)(inArgs{:});
 
 
-                % return output arguments as a struct (which can be serialized
-                % easily)
+                % return output arguments as a struct (which can be easily serialized)
                 for oai = 1:nOutArgs
                     output.(method.OutputNames{oai}) = outArgs{oai};
                 end
