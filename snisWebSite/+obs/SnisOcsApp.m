@@ -18,32 +18,32 @@ classdef SnisOcsApp < Simple.App.App
             addpath("/home/ocs/matlab/AstroPack/matlab/startup")
             startup_LAST(true,true);
             
-            [ret, str] = system('hostname -s');
-            if ret == 0
-                Obj.Hostname = str(1:end-1);
-                str = strrep(Obj.Hostname, 'last', '');
-                Obj.MountSide = str(end);
-                Obj.MountNumber = str2double(str(1:end-1));
-            else
-                throw(MException('OCS:SnisOcsApp', 'Cannot get hostname'));
-            end
+%             [ret, str] = system('hostname -s');
+%             if ret == 0
+%                 Obj.Hostname = str(1:end-1);
+%                 str = strrep(Obj.Hostname, 'last', '');
+%                 Obj.MountSide = str(end);
+%                 Obj.MountNumber = str2double(str(1:end-1));
+%             else
+%                 throw(MException('OCS:SnisOcsApp', 'Cannot get hostname'));
+%             end
+%             
+%             if Obj.MountSide == "e"
+%                 EquipLocation = [ 1, 2 ];
+%             else
+%                 EquipLocation = [ 4, 3 ];
+%             end
+%             
+%             if Obj.MountSide == "e"
+%                 OtherSide = "w";
+%             else
+%                 OtherSide = "e";
+%             end
+%             
+%             Node = obs.api.Node();
+%             MountLocation = "LAST." + string(Node.NodeId) + "." + Obj.MountNumber;
             
-            if Obj.MountSide == "e"
-                EquipLocation = [ 1, 2 ];
-            else
-                EquipLocation = [ 4, 3 ];
-            end
-            
-            if Obj.MountSide == "e"
-                OtherSide = "w";
-            else
-                OtherSide = "e";
-            end
-            
-            Node = obs.api.Node();
-            MountLocation = "LAST." + string(Node.NodeId) + "." + Obj.MountNumber;
-            
-            Obj.Mounts = [ obs.api.makeApi('Location', MountLocation) ];
+            Obj.Mounts = [ obs.api.makeApi('Location', 'LOCAL.mount') ];
             
             %Obj.Mounts = [ obs.api.Wrapper('Locator', obs.api.Locator('Location', MountLocation)) ];
             
