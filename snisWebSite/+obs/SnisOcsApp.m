@@ -15,25 +15,37 @@ classdef SnisOcsApp < Simple.App.App
     methods
         function Obj = SnisOcsApp()
             
+            Stack = dbstack();
+            Func = Stack(1).name;
+            
             addpath("/home/ocs/matlab/AstroPack/matlab/startup")
             startup_LAST(true,true);
             
-            Args.Project = 'LAST';
-            [ret, str] = system('hostname -s');
-            if ret == 0
-                Args.Hostname = str(1:end-1);
-                str = strrep(Args.Hostname, 'last', '');
-                Args.MountSide = str(end);
-                Args.MountId = str2double(str(1:end-1));
-            else
-                throw(MException('OCS:SnisOcsApp', 'Cannot get hostname'));
+            Node = obs.api.Node();
+            if ~strcmp(Node.ProjectName, 'LAST')
+                error("%s: Don't know (yet?) how to handle ProjectName '%s'", Func, Node.ProjectName);
             end
             
-            if Args.MountSide == "e"
+            [Ret, Hostname] = system('hostname -s');
+            if Ret == 0
+                Hostname = Hostname(1:end-1); % trim newline
+                if ~startsWith(Hostname, 'last')
+                    error("%s: Hostname (%s) does not start with 'last'", Func, Hostname);
+                end
+                Hostname = strrep(Hostname, 'last', '');
+                MountSide = Hostname(end);
+                MountId = str2double(Hostname(1:end-1));
+            else
+                error("%s: Cannot get hostname", Func);
+            end
+            
+            if MountSide == "e"
                 EquipIds = [ 1, 2 ];
             else
                 EquipIds = [ 4, 3 ];
             end
+            
+            Location = sprintf("%s.%d.mount%d", Node.ProjectName, Node.NodeId, MountId);
 %             
 %             if Obj.MountSide == "e"
 %                 OtherSide = "w";
@@ -44,19 +56,19 @@ classdef SnisOcsApp < Simple.App.App
 %             Node = obs.api.Node();
 %             MountLocation = "LAST." + string(Node.NodeId) + "." + Obj.MountNumber;
             
-            Obj.Mounts = [ obs.api.makeApi('Location', 'LOCAL.mount') ];
+            Obj.Mounts = [ obs.api.makeApi('Location', Location) ];
             
-            Obj.Cameras = [ ...
-                obs.api.makeApi('Location', sprintf("LOCAL.camera%d", EquipIds(1))), ...
-                obs.api.makeApi('Location', sprintf("LOCAL.camera%d", EquipIds(2)))  ...
-            ];       
+%             Obj.Cameras = [ ...
+%                 obs.api.makeApi('Location', sprintf("%s.camera%d", Location, EquipIds(1))), ...
+%                 obs.api.makeApi('Location', sprintf("%s.camera%d", Location, EquipIds(2)))  ...
+%             ];       
 %             Obj.PowerSwitches    = [ ...
 %                 obs.api.makeApi('Location', sprintf("%s.%s%d", MountLocation, "switch", EquipLocation(1))), ...
 %                 obs.api.makeApi('Location', sprintf("%s.%s%d", MountLocation, "switch", EquipLocation(2)))  ...
 %             ]; 
             Obj.Focusers    = [ ...
-                obs.api.makeApi('Location', sprintf("LOCAL.focuser%d", EquipIds(1))), ...
-                obs.api.makeApi('Location', sprintf("LOCAL.focuser%d", EquipIds(2)))  ...
+                obs.api.makeApi('Location', sprintf("%s.focuser%d", Location, EquipIds(1))), ...
+                obs.api.makeApi('Location', sprintf("%s.focuser%d", Location, EquipIds(2)))  ...
             ];  
 %             Obj.Units    = [ ...
 %                 obs.api.makeApi('Location', sprintf("%s.%s%d", MountLocation, "unit", EquipLocation(1))), ...
