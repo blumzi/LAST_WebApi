@@ -1,4 +1,7 @@
 #!/bin/bash
 
 TOP=~ocs/matlab/LAST/LAST_WebApi
-last-matlab -nodisplay -batch "addpath('"${TOP}"'); addpath('"${TOP}/Simple3rdParty"'); addpath('"${TOP}/+Simple"'); run('obs.SnisOCS.m')" >>/var/log/ocs/api/server/$(date --iso).log 2>&1
+LOGDIR=/var/log/ocs/api/server
+
+mkdir -p ${LOGDIR}
+last-matlab -nodisplay -batch "addpath('"${TOP}"'); addpath('"${TOP}/Simple3rdParty"'); addpath('"${TOP}/+Simple"'); run('obs.SnisOCS.m')" >>${LOGDIR}/$(date --iso).log 2>&1
