@@ -169,14 +169,11 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
         function output = invokeOcsServiceMethod(this, request, response, app, requestedDevice, requestedUnit, requestedMethod)
 
             output = [];
-            [ret, str] = system('hostname -s');
-            if ret == 0
-                str = strrep(str(1:end-1), 'last', '');
-                mount_side = str(end);
-                mount_number = str2double(str(1:end-1));
-            else
-                throw(MException('OCS:SnisOcsApp:invokeOcsServiceMethod', 'Cannot get hostname'));
-            end
+            
+            hostname = obs.api.ConfiguredHostname.Hostname;
+            hostname = strrep(hostname, 'last', '');
+            mount_side = hostname(end);
+            mount_number = str2double(hostname(1:end-1));
             
             eqtype = obs.api.Equipment.lookup('Str', requestedDevice);
             switch eqtype
