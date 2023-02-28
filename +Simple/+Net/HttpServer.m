@@ -246,7 +246,7 @@ classdef HttpServer < handle
                 this.requestPipeline(request);
             end
             
-            this.log('WTF: 0');
+            this.log('Stopping by user request');
             this.stop();
             this.isStopping = false;
             this.checkStopFlag = false;
