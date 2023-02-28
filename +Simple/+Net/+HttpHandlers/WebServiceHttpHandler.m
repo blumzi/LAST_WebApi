@@ -41,7 +41,7 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                     try
                         output = this.invokeOcsServiceMethod(request, response, app, device, unitId, method);
                         response.write(jsonencode(struct(   ...
-                            'Value',            output,         ...
+                            'Value',            jsonencode(output),         ...
                             'Error',            string(nan),    ...
                             'ErrorReport',  string(nan))));
                     catch ex
@@ -135,13 +135,14 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
             args = [];
             value = request.get('Value');
             if ~isempty(value)
-                args.Value = value;
+                args.Value = string(char(value));   % by convention, always pass strings to property setter
             end
         end
         
         function args = mapOcsMethodArguments(this, request, methodMC)
             nargs = length(methodMC.InputNames) - 1; % First arg is Obj, ignore it.
             args = cell(1, nargs);
+            %args = [];
             
             for i = 2:nargs+1
                 % For each method parameter, search it first in post
@@ -150,7 +151,7 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                 fieldName = methodMC.InputNames{i};
                 fieldValue = request.get(fieldName);
                 %args(i-1).(fieldName) = fieldValue;
-                args(i-1) = {fieldValue};
+                args(i-1) = {string(char(fieldValue))};
 %                 argName = methodMC.InputNames{i};
 %                 args{i-1} = request.get(argName);
             end
@@ -273,12 +274,8 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                 % Prepare in/out arguments
                 nOutArgs = length(method.OutputNames);
                 outArgs = cell(1, nOutArgs);
-                %inArgs = this.mapMethodArguments(request, method);
-                %inArgs = cell(1, length(method.InputNames) - 1);
-                inArgs = this.mapOcsMethodArguments(request, method);
-                 
+                inArgs = this.mapOcsMethodArguments(request, method);                 
                 [outArgs{:}] = unit.(method.Name)(inArgs{:});
-
 
                 % return output arguments as a struct (which can be easily serialized)
                 for oai = 1:nOutArgs
