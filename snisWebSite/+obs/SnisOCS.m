@@ -1,11 +1,7 @@
 if exist('server', 'var') && server.isActive
-   server.stop();
-   delete(server);
+       server.stop();
 end
-
-% path = which(mfilename());
-% path = path(1:find(path == '/', 1, 'last') - 1);
-% path = path(1:find(path == '/', 1, 'last'));
+clear all;
 
 pool = gcp('nocreate');
 if isempty(pool)
