@@ -259,7 +259,11 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                 inArgs = this.mapPropertyArguments(request);
                 
                 if isfield(inArgs, 'Value')
-                    unit.(property.Name) = inArgs.Value;   % run the property setter
+                    if any(ismember(property.Tags, 'encode_Value'))
+                        unit.(property.Name) = jsondecode(matlab.net.base64decode(inArgs.Value));   % run the property setter
+                    else
+                        unit.(property.Name) = inArgs.Value;   % run the property setter
+                    end
                 else                    
                     [outArgs{:}] = unit.(property.Name);    % run the property getter
                     output = outArgs{1};
