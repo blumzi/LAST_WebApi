@@ -261,6 +261,7 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                 if isfield(inArgs, 'Value')
                     if any(ismember(property.Tags, 'encode_Value'))
                         unit.(property.Name) = jsondecode(matlab.net.base64decode(inArgs.Value));   % run the property setter
+                        unit.(property.Name) = obs.api.ApiBase.decodeArgument(inArgs.Value);   % run the property setter
                     else
                         unit.(property.Name) = inArgs.Value;   % run the property setter
                     end
@@ -278,7 +279,14 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                 % Prepare in/out arguments
                 nOutArgs = length(method.OutputNames);
                 outArgs = cell(1, nOutArgs);
-                inArgs = this.mapOcsMethodArguments(request, method);                 
+                inArgs = this.mapOcsMethodArguments(request, method);  
+                for i = 1:numel(inArgs)
+                    if any(ismember(method.Tags, "encode_" + inArgs(i)))
+                        decodedArgName = sprintf("decoded_%s", inArgs(i));
+                        eval(sprintf("%s = obs.api.ApiBase.decodeArgument(inArgs(i));", decodedArgName));
+                        inArgs(i) = decodedArgName;
+                    end
+                end
                 [outArgs{:}] = unit.(method.Name)(inArgs{:});
 
                 % return output arguments as a struct (which can be easily serialized)
