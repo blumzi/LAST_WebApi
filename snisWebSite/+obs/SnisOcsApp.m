@@ -46,7 +46,7 @@ classdef SnisOcsApp < Simple.App.App
             end
             
             Location = sprintf("%s.%d.mount%d", Node.ProjectName, Node.NodeId, MountId);
-%             
+%              
 %             if Obj.MountSide == "e"
 %                 OtherSide = "w";
 %             else
@@ -56,7 +56,7 @@ classdef SnisOcsApp < Simple.App.App
 %             Node = obs.api.Node();
 %             MountLocation = "LAST." + string(Node.NodeId) + "." + Obj.MountNumber;
             
-            Obj.Mounts = [ obs.api.makeApi('Location', Location) ];
+%            Obj.Mounts = [ obs.api.makeApi('Location', Location) ];
             
 %             Obj.Cameras = [ ...
 %                 obs.api.makeApi('Location', sprintf("%s.camera%d", Location, EquipIds(1))), ...

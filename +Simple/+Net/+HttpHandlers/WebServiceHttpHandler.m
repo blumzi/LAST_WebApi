@@ -184,8 +184,8 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                     units = app.Cameras;
                 case obs.api.Equipment.Focuser
                     units = app.Focusers;
-                case obs.api.Equipment.Switch
-                    units = app.Switches;
+                case obs.api.Equipment.Pswitch
+                    units = app.PowerSwitches;
                 case obs.api.Equipment.Unit
                     units = app.Units;
                 otherwise
