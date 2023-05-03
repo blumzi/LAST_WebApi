@@ -12,7 +12,7 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
         end
         
         function handleRequest(this, request, app)
-            serviceUrl=request.Filename;
+            serviceUrl=lower(request.Filename);
             response = request.Response;
             
             if ~isempty(serviceUrl) > 0 && serviceUrl(1) == '/'
