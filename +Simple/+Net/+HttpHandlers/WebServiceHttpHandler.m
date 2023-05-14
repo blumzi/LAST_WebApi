@@ -280,10 +280,10 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                 nOutArgs = length(method.OutputNames);
                 outArgs = cell(1, nOutArgs);
                 inArgs = this.mapOcsMethodArguments(request, method);  
-                for i = 1:numel(inArgs)
-                    if any(ismember(method.Tags, "encode_" + inArgs(i)))
-                        decodedArgName = sprintf("decoded_%s", inArgs(i));
-                        eval(sprintf("%s = obs.api.ApiBase.decodeArgument(inArgs(i));", decodedArgName));
+                for i = 1:numel(method.InputNames)
+                    if any(ismember(method.Tags, "encode_" + method.InputNames(i)))
+                        decodedArgName = sprintf('decoded_%s', method.InputNames{i});
+                        eval(sprintf("%s = obs.api.ApiBase.decodeArgument(inArgs{i});", decodedArgName));
                         inArgs(i) = decodedArgName;
                     end
                 end
