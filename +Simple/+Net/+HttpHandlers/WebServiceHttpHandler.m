@@ -279,12 +279,12 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                 % Prepare in/out arguments
                 nOutArgs = length(method.OutputNames);
                 outArgs = cell(1, nOutArgs);
-                inArgs = this.mapOcsMethodArguments(request, method);  
-                for i = 1:numel(method.InputNames)
+                inArgs = this.mapOcsMethodArguments(request, method);
+                % substitute in place the string inArgs{:} elements with
+                %  their decoded values, before calling the method
+                for i = 2:numel(method.InputNames) % the first InputNames is the class name
                     if any(ismember(method.Tags, "encode_" + method.InputNames(i)))
-                        decodedArgName = sprintf('decoded_%s', method.InputNames{i});
-                        eval(sprintf("%s = obs.api.ApiBase.decodeArgument(inArgs{i});", decodedArgName));
-                        inArgs(i) = decodedArgName;
+                        inArgs{i-1} = obs.api.ApiBase.decodeArgument(inArgs{i-1});
                     end
                 end
                 [outArgs{:}] = unit.(method.Name)(inArgs{:});
