@@ -38,10 +38,12 @@ classdef SnisOcsApp < Simple.App.App
             else
                 error("%s: Cannot get hostname", Func);
             end
-            
+
             if MountSide == "e"
+                OtherSide = "w";
                 EquipIds = [ 1, 2 ];
             else
+                OtherSide = "e";
                 EquipIds = [ 4, 3 ];
             end
             
@@ -52,14 +54,7 @@ classdef SnisOcsApp < Simple.App.App
 %   something which can be loaded from configuration files. To allow
 %   e.g. prototype test rigs with all equipment connected to a single
 %   computer, or mounts with a number of telescopes different than four
-
-%             if Obj.MountSide == "e"
-%                 OtherSide = "w";
-%             else
-%                 OtherSide = "e";
-%             end
-%             
-            
+          
             Obj.Mounts = [ obs.api.makeApi('Location', sprintf('%s%s',MountLocation, MountSide)) ];
             
              Obj.Cameras = [ ...
@@ -75,8 +70,9 @@ classdef SnisOcsApp < Simple.App.App
                 obs.api.makeApi('Location', sprintf("%s.focuser%d", MountLocation, EquipIds(1))), ...
                 obs.api.makeApi('Location', sprintf("%s.focuser%d", MountLocation, EquipIds(2)))  ...
             ];  
-%             Obj.Units    = [ ...
-%                 obs.api.makeApi('Location', sprintf("%s.%s%d", MountLocation, "unit", EquipLocation(1))), ...
+             Obj.Units    = [ ...
+                obs.api.makeApi('Location', sprintf("%s.unit%d%s", Location, MountId, MountSide)), ...
+                          ];
 %                 obs.api.makeApi('Location', sprintf("%s.%s%d", MountLocation, "unit", EquipLocation(2)))  ...
 %                 obs.api.makeApi('Location', sprintf("%s%s.%s%d", MountLocation, OtherSide, "unit", EquipLocation(2)))  ...
 %                 obs.api.makeApi('Location', sprintf("%s%s.%s%d", MountLocation, OtherSide, "unit", EquipLocation(2)))  ...
