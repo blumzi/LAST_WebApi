@@ -249,7 +249,7 @@ classdef log4m < handle
             
             % If necessary write to command window
             if( self.commandWindowLevel <= level )
-                fprintf('%s:%s\n', scriptName, message);
+                fprintf('%s:%s:%s\n', scriptName, processInfo(), message);
             end
             
             %If currently set log level is too high, just skip this log
@@ -278,10 +278,11 @@ classdef log4m < handle
             % Append new log to log file
             try
                 fid = fopen(self.fullpath,'a');
-                fprintf(fid,'%s %s %s - %s\r\n' ...
+                fprintf(fid,'%s %s %s %s - %s\r\n' ...
                     , datestr(now,'yyyy-mm-dd HH:MM:SS,FFF') ...
                     , levelStr ...
                     , scriptName ... % Have left this one with the '.' if it is passed
+                    , processInfo() ...
                     , message);
                 fclose(fid);
             catch ME_1
@@ -289,6 +290,18 @@ classdef log4m < handle
             end
         end
     end
-    
 end
 
+    
+function out = processInfo()
+    w = getCurrentWorker();
+    pid = feature('getpid');
+
+    out = sprintf("pid=%d", pid);
+    if ~isempty(w)
+        if isequal(class(w), 'parallel.cluster.CJSWorker')
+            out = out + ", worker=" + w.ProcessId;
+        end
+    end
+    out = "[" + out + "]";
+end
