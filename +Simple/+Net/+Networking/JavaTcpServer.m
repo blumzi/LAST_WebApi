@@ -26,8 +26,9 @@ switch(action)
             end
         end
         
-        serverSocket.setSoTimeout(timeout);
         serverSocket.setReuseAddress(true);
+        serverSocket.setSoTimeout(timeout);
+        serverSocket.setPerformancePreferences(0, 1, 2);
         TCP.port = data;
         TCP.serverSocket=serverSocket;
         GlobalserverSocket=serverSocket;
