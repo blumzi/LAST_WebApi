@@ -6,12 +6,44 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
         function ismatch = matches(this, request, app)
             ismatchOriginal = any(regexp(request.Filename, '^\/?\w+(?:\/\w+)?\/?$'));
             
-            ismatchOcs = any(regexp(request.Filename, ...
-                '\/?(api)\/(v\d+)\/((' + strjoin(obs.api.Equipment.validWords, '|') + '))\/(\d+|[NnSs][WwEe])\/(\w+)'));
+            ocs_pattern = '\/?(api)\/(v\d+)\/';
+            unit_or_mount_pattern = '((' + strjoin(obs.api.Equipment.validWords('Types', ...
+                [obs.api.Equipment.Unit obs.api.Equipment.Mount]), '|') + '))';
+            equip_pattern = '((' + strjoin(obs.api.Equipment.validWords('Types', ...
+                [obs.api.Equipment.Camera obs.api.Equipment.Focuser]), '|') + '))';
+            
+            ismatch_unit_or_mount = any(regexp(request.Filename, ocs_pattern + unit_or_mount_pattern));
+            ismatch_equip = any(regexp(request.Filename, ocs_pattern + equip_pattern + '\/(\d)'));
+            ismatchOcs = ismatch_unit_or_mount || ismatch_equip;
             ismatch = ismatchOriginal | ismatchOcs;
         end
         
         function handleRequest(this, request, app)
+%             function doHandleResponse(out)
+%                 Timing.SNIS.Toc = toc(Tic);
+%                 Timing.SNIS.End = datestr(now,'yyyy-mm-dd HH:MM:SS,FFF');
+%                 response.write(jsonencode(struct(       ...
+%                     'Value',       jsonencode(out),     ...
+%                     'Error',       string(nan),         ...
+%                     'ErrorReport', string(nan),         ...
+%                     'Timing',      Timing)));
+%             end
+%             
+%             function doHandleError(e)
+%                 Timing.SNIS.Toc = toc(Tic);
+%                 Timing.SNIS.End = datestr(now,'yyyy-mm-dd HH:MM:SS,FFF');
+%                 if iscell(e)
+%                     ex = e{1};
+%                 else
+%                     ex = e;
+%                 end
+%                 
+%                 response.write(jsonencode(struct(       ...
+%                     'Value',       [],                  ...
+%                     'Error',       ex,                  ...
+%                     'Timing',      Timing)));
+%             end
+            
             serviceUrl=request.Filename;
             response = request.Response;
             
@@ -23,35 +55,57 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
             end
             serviceUrlParts = strsplit(serviceUrl, '/');
             
-            isOcs = strcmp(serviceUrlParts{1}, 'ocs');
+            isOcs = strcmpi(serviceUrlParts{1}, 'ocs') && strcmpi(serviceUrlParts{2}, 'api');
             
             nparts = length(serviceUrlParts);
             if nparts == 1 
                 % Handle Service Methods Listing
                 foo = @Simple.Net.HttpHandlers.WebServiceHttpHandler.generateControllerMethodsHTML;
                 response.write(foo(request, this.getController(request, app, serviceUrlParts{1}), serviceUrlParts{1}));
-            elseif nparts == 2 || (isOcs && nparts == 6)
+            elseif nparts == 2 || (isOcs && (nparts == 5 || nparts == 6))
                 % Invoke service method
                 if isOcs
-                    response.ContentType='application/json; charset=UTF-8';
-                    apiVersion = serviceUrlParts{3};
-                    device = serviceUrlParts{4};
-                    unitId = serviceUrlParts{5};
-                    method = serviceUrlParts{6};
+                    response.ContentType = 'application/json; charset=UTF-8';
+                    apiVersion = lower(serviceUrlParts{3});
+                    equipType = lower(serviceUrlParts{4});
+                    if nparts == 5                      % 'Mount' or 'Unit'
+                        equipId = [];
+                        method = serviceUrlParts{5};
+                    else
+                        equipId = serviceUrlParts{5};   % 'Camera' or 'Focuser'
+                        method = serviceUrlParts{6};
+                    end
+                    Tic = tic;
+                    Timing.SNIS.Start = datestr(now,'yyyy-mm-dd HH:MM:SS,FFF');
                     try
-                        output = this.invokeOcsServiceMethod(request, response, app, device, unitId, method);
-                        response.write(jsonencode(struct(   ...
-                            'Value',            jsonencode(output),         ...
-                            'Error',            string(nan),    ...
-                            'ErrorReport',  string(nan))));
+                        output = this.invokeOcsServiceMethod(request, response, app, equipType, equipId, method);
+                        Timing.SNIS.Toc = toc(Tic);
+                        Timing.SNIS.End = datestr(now,'yyyy-mm-dd HH:MM:SS,FFF');
+                        response.write(jsonencode(struct(       ...
+                            'Value',       jsonencode(output),  ...
+                            'Error',       string(nan),         ...
+                            'ErrorReport', string(nan),         ...
+                            'Timing',      Timing)));
+                        
+%                         fut = parfeval(@this.invokeOcsServiceMethod, 1, request, response, app, equipType, equipId, method);
+%                         fut1 = afterEach(fut, @doHandleResponse, 0);
+%                         if ~isempty(fut1.Error)
+%                             doHandleError(fut1.Error);
+%                         end
+                        
                     catch ex
-                        response.write(jsonencode(struct(   ...
-                            'Value',            string(nan),    ...
-                            'Error',            ex,  ...
-                            'ErrorReport',  ex.getReport)));
+                        Timing.SNIS.Toc = toc(Tic);
+                        Timing.SNIS.End = datestr(now,'yyyy-mm-dd HH:MM:SS,FFF');
+                        response.write(jsonencode(struct(       ...
+                            'Value',       [],                  ...
+                            'Error',       ex,                  ...
+                            'ErrorReport', getReport(ex),       ...
+                            'Timing',      Timing)));
+%                         doHandleError(ex);
                         return;
                     end
                 else
+                    % The original stuff
                     response.ContentType='application/xml; charset=UTF-8';
                     output = this.invokeServiceMethod(request, response, app, serviceUrlParts{1}, serviceUrlParts{2});
                     responseEnvelope = Simple.Net.Envelope.Response(output);
@@ -145,15 +199,9 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
             %args = [];
             
             for i = 2:nargs+1
-                % For each method parameter, search it first in post
-                % content and second in query string to get the value,
-                % otherwise put and empty vector.
                 fieldName = methodMC.InputNames{i};
                 fieldValue = request.get(fieldName);
-                %args(i-1).(fieldName) = fieldValue;
                 args(i-1) = {string(char(fieldValue))};
-%                 argName = methodMC.InputNames{i};
-%                 args{i-1} = request.get(argName);
             end
         end
         
@@ -167,114 +215,104 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
         end
         
         
-        function output = invokeOcsServiceMethod(this, request, response, app, requestedDevice, requestedUnit, requestedMethod)
+        function output = invokeOcsServiceMethod(this, request, response, app, requestedEquipType, requestedEquipId, requestedMethod)
 
             output = [];
             
             hostname = obs.api.ConfiguredHostname.Hostname;
             hostname = strrep(hostname, 'last', '');
-            mount_side = hostname(end);
-            mount_number = str2double(hostname(1:end-1));
+            unit_side = hostname(end);
             
-            eqtype = obs.api.Equipment.lookup('Str', requestedDevice);
+            eqtype = obs.api.Equipment.lookup('Str', requestedEquipType);
             switch eqtype
                 case obs.api.Equipment.Mount
-                    units = app.Mounts;
+                    equips = app.Mounts;
                 case obs.api.Equipment.Camera
-                    units = app.Cameras;
+                    equips = app.Cameras;
                 case obs.api.Equipment.Focuser
-                    units = app.Focusers;
-                case obs.api.Equipment.Pswitch
-                    units = app.PowerSwitches;
+                    equips = app.Focusers;
                 case obs.api.Equipment.Unit
-                    units = app.Units;
+                    equips = app.Units;
                 otherwise
                     obs.SnisOcsApp.RaiseInvalidDeviceError(request, ...
-                        "Invalid device '" + requestedDevice + "'. Valid devices are: " + strjoin(obs.api.Equipment.validWords, ', ') );
+                        "Invalid equipment '" + requestedEquipType + "'. Valid equipments are: " + strjoin(obs.api.Equipment.validWords, ', ') );
             end
             
-            if isempty(units)
-                throw(MException('OCS:SnisOcsApp:invokeOcsServiceMethod', sprintf("No units of type '%s'", eqtype)));
+            if isempty(equips)
+                throw(MException('OCS:SnisOcsApp:invokeOcsServiceMethod', ...
+                    sprintf("The equipment array of type '%s' is empty in this web application (%s)", requestedEquipType, class(app))));
             end
                 
             
-            % Unit IDs:
-            %  when requestedDevice is 'mount':  only '1'
-            %  otherwise they must be two-letter strings (e.g. 'ne', 'sw',
-            %  etc.), where the second letter must be the same as
-            %  app.mount_side (either 'e' or 'w')
             
-            if mount_side == 'e'
-                valid_units = [1, 2];
-            elseif mount_side == 'w'
-                valid_units = [3, 4];
+            if unit_side == 'e'
+                valid_equip_ids = [1, 2];
+            elseif unit_side == 'w'
+                valid_equip_ids = [3, 4];
             end
             
-            requestedUnit = str2num(requestedUnit); %#ok<*ST2NM>
-            if eqtype == obs.api.Equipment.Mount
-                if requestedUnit ~= 1
+            % EquipId must be empty for Unit or Mount EquipTypes
+            if eqtype == obs.api.Equipment.Unit || eqtype == obs.api.Equipment.Mount
+                if ~isempty(requestedEquipId)
                     obs.SnisOcsApp.RaiseInvalidUnitError(request, ...
-                        "Invalid unitID " + requestedUnit + " for device '" + requestedDevice  + "'. Valid unit ID is: 1");
-                end            
-            elseif mount_side == 'e' && ~ismember(requestedUnit, valid_units)
-                err = "Invalid unitID " + requestedUnit + " for device " + requestedDevice + ...
-                    ". Valid unit IDs are: " + strjoin(string(valid_units), ", ");
-                obs.SnisOcsApp.RaiseInvalidUnitError(request, err);            
-            elseif mount_side == 'w' && ~ismember(requestedUnit, valid_units)
-                err = "Invalid unitID " + requestedUnit + " for device " + requestedDevice + ...
-                    ". Valid unit IDs are: " + strjoin(string(valid_units), ", ");
-                obs.SnisOcsApp.RaiseInvalidUnitError(request, err);
-            end
-            
-                        
-            % 'units' is the dictionary of current units for the requested
-            %   device type (e.g. mount, camera, focuser, etc.)
-            
-            if mount_side == 'e' && ismember(requestedUnit, valid_units)
-                unit = units(requestedUnit);
-            elseif mount_side == 'w' && ismember(requestedUnit, valid_units)
-                unit = units(requestedUnit - 2);
+                        "Invalid EquipId " + requestedEquipId + " for device '" + requestedEquipType  + "'. Should be <empty>");
+                end
+                equip = equips(1);
             else
-                obs.SnisOcsApp.RaiseInvalidUnitError(request, ...
-                    "Invalid unitID '" + requestedUnit + "' for device " + requestedDevice + ...
-                    ". Current valid units IDs are: [" + strjoin(string(valid_units), ', ') + "]");
+                    
+                requestedEquipId = str2num(requestedEquipId); %#ok<*ST2NM>
+                if unit_side == 'e' && ~ismember(requestedEquipId, valid_equip_ids)
+                    err = "Invalid EquipId " + requestedEquipId + " for device " + requestedEquipType + ...
+                        ". Valid EquipIds are: " + strjoin(string(valid_equip_ids), ", ");
+                    obs.SnisOcsApp.RaiseInvalidUnitError(request, err);            
+                elseif unit_side == 'w' && ~ismember(requestedEquipId, valid_equip_ids)
+                    err = "Invalid EquipId " + requestedEquipId + " for device " + requestedEquipType + ...
+                        ". Valid EquipIds are: " + strjoin(string(valid_equip_ids), ", ");
+                    obs.SnisOcsApp.RaiseInvalidUnitError(request, err);
+                end
+                
+                equipId = requestedEquipId;
+                if unit_side == 'w'
+                    equipId = equipId - 2;
+                end 
+                equip = equips(equipId);
             end
             
             if strcmp(requestedMethod, "properties")
-                output = unit.WrappedPropertyNames;
+                output = equip.WrappedPropertyNames;
                 return;
             end
             
             if strcmp(requestedMethod, "methods")
-                output = strings(1, numel(unit.WrappedMethodSignatures));
-                for i = 1:numel(unit.WrappedMethodSignatures)
-                    output(i) = unit.WrappedMethodSignatures(i);
+                output = strings(1, numel(equip.WrappedMethodSignatures));
+                for i = 1:numel(equip.WrappedMethodSignatures)
+                    output(i) = equip.WrappedMethodSignatures(i);
                 end
                 return
             end
             
-            if unit.isWrappedProperty(requestedMethod)
-                property = unit.WrappedProperties(requestedMethod);
+            if equip.isWrappedProperty(requestedMethod)
+                property = equip.WrappedProperties(requestedMethod);
                 outArgs = cell(1, 1);
                 inArgs = this.mapPropertyArguments(request);
                 
                 if isfield(inArgs, 'Value')
                     if any(ismember(property.Tags, 'encode_Value'))
-                        unit.(property.Name) = jsondecode(matlab.net.base64decode(inArgs.Value));   % run the property setter
-                        unit.(property.Name) = obs.api.ApiBase.decodeArgument(inArgs.Value);   % run the property setter
+                        equip.(property.Name) = jsondecode(matlab.net.base64decode(inArgs.Value));   % run the property setter
+                        equip.(property.Name) = obs.api.ApiBase.decodeArgument(inArgs.Value);   % run the property setter
                     else
-                        unit.(property.Name) = inArgs.Value;   % run the property setter
+                        equip.(property.Name) = inArgs.Value;   % run the property setter
                     end
                 else                    
-                    [outArgs{:}] = unit.(property.Name);    % run the property getter
+                    [outArgs{:}] = equip.(property.Name);    % run the property getter
                     output = outArgs{1};
                 end
                 return;
             end
             
             % Handle methods
-            if unit.isWrappedMethod(requestedMethod)
-                method = unit.WrappedMethods(requestedMethod);
+            if equip.isWrappedMethod(requestedMethod)
+                method = equip.WrappedMethods(requestedMethod);
             
                 % Prepare in/out arguments
                 nOutArgs = length(method.OutputNames);
@@ -287,7 +325,7 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                         inArgs{i-1} = obs.api.ApiBase.decodeArgument(inArgs{i-1});
                     end
                 end
-                [outArgs{:}] = unit.(method.Name)(inArgs{:});
+                [outArgs{:}] = equip.(method.Name)(inArgs{:});
 
                 % return output arguments as a struct (which can be easily serialized)
                 for oai = 1:nOutArgs
@@ -297,9 +335,9 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
             end
             
             obs.SnisOcsApp.RaiseInvalidMethodError(request, ...
-                "Invalid property/method '" + requestedMethod + "' for device '" + requestedDevice + ...
-                "'. Valid properties are: [" + strjoin(unit.WrappedProperties.keys, ', ') + "]." + ...
-                "'. Valid methods are: [" + strjoin(unit.WrappedMethods.keys, ', ') + "]." ...
+                "Invalid property/method '" + requestedMethod + "' for device '" + requestedEquipType + ...
+                "'. Valid properties are: [" + strjoin(equip.WrappedProperties.keys, ', ') + "]." + ...
+                "'. Valid methods are: [" + strjoin(equip.WrappedMethods.keys, ', ') + "]." ...
                 );
         end
     end

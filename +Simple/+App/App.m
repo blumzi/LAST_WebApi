@@ -133,8 +133,8 @@ classdef App < handle
     methods (Static, Access=protected)
         function [path, filename] = getLogPath()
             %path  = pwd;
-            path = '/var/log/ocs/api';
-            filename = [datestr(now, 'yyyy-mm-dd.HH.MM.SS.FFF')  '.log'];
+            path = ['/var/log/ocs/api/' datestr(now, 'yyyy-mm-dd')];
+            filename = ['app.log'];
         end
     end
     
@@ -185,7 +185,7 @@ classdef App < handle
         end
         
         function startInWorkerProcess(app)
-            Simple.App.App.start(app.getRegisteredAppForWorkerProcess())
+            Simple.App.App.start(app.startInWorkerProcess())
         end
         
         function start(app)
