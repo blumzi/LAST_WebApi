@@ -40,8 +40,10 @@ classdef SnisOcsApp < Simple.App.App
             end
             
             if UnitSide == "e"
+                OtherSide = "w";
                 EquipIds = [ 1, 2 ];
             else
+                OtherSide = "e";
                 EquipIds = [ 4, 3 ];
             end
             
@@ -52,13 +54,7 @@ classdef SnisOcsApp < Simple.App.App
 %   something which can be loaded from configuration files. To allow
 %   e.g. prototype test rigs with all equipment connected to a single
 %   computer, or mounts with a number of telescopes different than four
-
-%             if Obj.UnitSide == "e"
-%                 OtherSide = "w";
-%             else
-%                 OtherSide = "e";
-%             end
-%             
+            
             
             Obj.Mounts = [ obs.api.makeApi('Location', sprintf('%s.mount',UnitLocation)) ];
             
@@ -74,13 +70,13 @@ classdef SnisOcsApp < Simple.App.App
             Obj.Focusers    = [ ...
                 obs.api.makeApi('Location', sprintf("%s.focuser%d", UnitLocation, EquipIds(1))), ...
                 obs.api.makeApi('Location', sprintf("%s.focuser%d", UnitLocation, EquipIds(2)))  ...
-            ];  
-%             Obj.Units    = [ ...
-%                 obs.api.makeApi('Location', sprintf("%s.%s%d", UnitLocation, "unit", EquipLocation(1))), ...
-%                 obs.api.makeApi('Location', sprintf("%s.%s%d", UnitLocation, "unit", EquipLocation(2)))  ...
-%                 obs.api.makeApi('Location', sprintf("%s%s.%s%d", UnitLocation, OtherSide, "unit", EquipLocation(2)))  ...
-%                 obs.api.makeApi('Location', sprintf("%s%s.%s%d", UnitLocation, OtherSide, "unit", EquipLocation(2)))  ...
-%             ];
+            ];
+            Obj.Units    = [ ...
+                obs.api.makeApi('Location', sprintf("%s.%s%d", UnitLocation, "unit", EquipLocation(1))), ...
+                obs.api.makeApi('Location', sprintf("%s.%s%d", UnitLocation, "unit", EquipLocation(2)))  ...
+                obs.api.makeApi('Location', sprintf("%s%s.%s%d", UnitLocation, OtherSide, "unit", EquipLocation(2)))  ...
+                obs.api.makeApi('Location', sprintf("%s%s.%s%d", UnitLocation, OtherSide, "unit", EquipLocation(2)))  ...
+            ];
         end
     end
     
