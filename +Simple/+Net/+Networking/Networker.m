@@ -16,7 +16,7 @@ classdef (Abstract) Networker < handle
                 return;
             end
 
-            this.server.log('request accepted', char(requestdata(1:min(1000,end))), this.server.LogTypes.Debug); 
+            % this.server.log('request accepted', char(requestdata(1:min(1000,end))), this.server.LogTypes.Debug); 
 
             % Parse request data
             request = Simple.Net.HttpRequest(this.server, requestdata);
