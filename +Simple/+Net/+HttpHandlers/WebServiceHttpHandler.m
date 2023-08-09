@@ -19,30 +19,6 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
         end
         
         function handleRequest(this, request, app)
-%             function doHandleResponse(out)
-%                 Timing.SNIS.Toc = toc(Tic);
-%                 Timing.SNIS.End = datestr(now,'yyyy-mm-dd HH:MM:SS,FFF');
-%                 response.write(jsonencode(struct(       ...
-%                     'Value',       jsonencode(out),     ...
-%                     'Error',       string(nan),         ...
-%                     'ErrorReport', string(nan),         ...
-%                     'Timing',      Timing)));
-%             end
-%             
-%             function doHandleError(e)
-%                 Timing.SNIS.Toc = toc(Tic);
-%                 Timing.SNIS.End = datestr(now,'yyyy-mm-dd HH:MM:SS,FFF');
-%                 if iscell(e)
-%                     ex = e{1};
-%                 else
-%                     ex = e;
-%                 end
-%                 
-%                 response.write(jsonencode(struct(       ...
-%                     'Value',       [],                  ...
-%                     'Error',       ex,                  ...
-%                     'Timing',      Timing)));
-%             end
             
             serviceUrl=request.Filename;
             response = request.Response;
@@ -87,12 +63,6 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                             'ErrorReport', string(nan),         ...
                             'Timing',      Timing)));
                         
-%                         fut = parfeval(@this.invokeOcsServiceMethod, 1, request, response, app, equipType, equipId, method);
-%                         fut1 = afterEach(fut, @doHandleResponse, 0);
-%                         if ~isempty(fut1.Error)
-%                             doHandleError(fut1.Error);
-%                         end
-                        
                     catch ex
                         Timing.SNIS.Toc = toc(Tic);
                         Timing.SNIS.End = datestr(now,'yyyy-mm-dd HH:MM:SS,FFF');
@@ -101,7 +71,6 @@ classdef WebServiceHttpHandler < Simple.Net.HttpHandlers.HttpHandler
                             'Error',       ex,                  ...
                             'ErrorReport', getReport(ex),       ...
                             'Timing',      Timing)));
-%                         doHandleError(ex);
                         return;
                     end
                 else
