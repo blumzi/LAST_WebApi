@@ -7,9 +7,7 @@ classdef SnisOcsApp < Simple.App.App
         Focusers
         Units
         
-%         Hostname
-%         MountNumber
-%         UnitSide
+        Futures = cell(0);
     end
     
     methods
@@ -72,11 +70,41 @@ classdef SnisOcsApp < Simple.App.App
                 obs.api.makeApi('Location', sprintf("%s.focuser%d", UnitLocation, EquipIds(2)))  ...
             ];
             Obj.Units    = [ ...
-                obs.api.makeApi('Location', sprintf("%s.%s%d", UnitLocation, "unit", EquipLocation(1))), ...
-                obs.api.makeApi('Location', sprintf("%s.%s%d", UnitLocation, "unit", EquipLocation(2)))  ...
-                obs.api.makeApi('Location', sprintf("%s%s.%s%d", UnitLocation, OtherSide, "unit", EquipLocation(2)))  ...
-                obs.api.makeApi('Location', sprintf("%s%s.%s%d", UnitLocation, OtherSide, "unit", EquipLocation(2)))  ...
+                obs.api.makeApi('Location', sprintf("%s.%02d%s", Location, UnitId, "e")), ...
+                obs.api.makeApi('Location', sprintf("%s.%02d%s", Location, UnitId, "w"))  ...
+%                 obs.api.makeApi('Location', sprintf("%s.%s%d", UnitLocation, "unit", EquipLocation(1))), ...
+%                 obs.api.makeApi('Location', sprintf("%s.%s%d", UnitLocation, "unit", EquipLocation(2)))  ...
+%                 obs.api.makeApi('Location', sprintf("%s%s.%s%d", UnitLocation, OtherSide, "unit", EquipLocation(2)))  ...
+%                 obs.api.makeApi('Location', sprintf("%s%s.%s%d", UnitLocation, OtherSide, "unit", EquipLocation(2)))  ...
             ];
+        end
+        
+        function handleFutures(Obj, httpServer)  
+            if isempty(Obj.Futures)
+                return;
+            end
+            
+            for i = 1:numel(Obj.Futures)
+                f = Obj.Futures{i};
+                
+                if ~isempty(f.Error)
+                    httpServer.server.logError(f.Error);
+                    Obj.Futures(i) = [];
+                elseif f.State == "finished" && ~f.Read
+                    try
+                        [request, ex, token] = fetchOutputs(f);
+                    catch ex
+                        httpServer.server.logError(ex);
+                        Obj.Futures(i) = [];
+                        continue;
+                    end
+                    httpServer.server.handleBackgroundRequest(request, ex, token);
+                    Obj.Futures(i) = [];
+                elseif f.State == "failed"
+                    httpServer.server.log("discarding a failed future", '', httpServer.server.LogLevel.Debug);
+                    Obj.Futures(i) = [];
+                end
+            end
         end
     end
     

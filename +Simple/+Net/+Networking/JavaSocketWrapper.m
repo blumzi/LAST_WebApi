@@ -63,7 +63,7 @@ classdef JavaSocketWrapper < Simple.Net.Networking.Networker
             didTerminate = false;
             
             % Wait for connections of browsers
-            this.tcpListener = Simple.Net.Networking.JavaTcpServer('accept', this.tcpListener, [], this.server.config);
+            this.tcpListener = Simple.Net.Networking.JavaTcpServer('accept', this.tcpListener, [], this.server.config, this);
 
             % If socket is -1, the user has close the "Close Window"
             if(this.tcpListener.socket==-1)
@@ -73,7 +73,7 @@ classdef JavaSocketWrapper < Simple.Net.Networking.Networker
         end
         
         % Send response to client
-        function sendResponse(this, header, content)
+        function sendResponse(this, header, content, tcpListener)
             % write the Http response back to the clients stream
             if isrow(content)
                 data = int8(content);
@@ -81,8 +81,14 @@ classdef JavaSocketWrapper < Simple.Net.Networking.Networker
                 data = int8(content)';
             end
             
-            Simple.Net.Networking.JavaTcpServer('write', this.tcpListener, int8(header), this.server.config);
-            Simple.Net.Networking.JavaTcpServer('write', this.tcpListener, data, this.server.config);
+% %             Simple.Net.Networking.JavaTcpServer('write', this.tcpListener, int8(header), this.server.config);
+% %             Simple.Net.Networking.JavaTcpServer('write', this.tcpListener, data, this.server.config);
+%             Simple.Net.Networking.JavaTcpServer('write', tcpListener, int8(header), this.server.config);
+%             Simple.Net.Networking.JavaTcpServer('write', tcpListener, data, this.server.config);
+            response = int8(1:length(header) + length(data));
+            response(1:length(header)) = header(1:end);
+            response(length(header)+1:end) = data(1:end);
+            Simple.Net.Networking.JavaTcpServer('write', tcpListener, response, this.server.config);
         end
         
         function wakeServer(this)

@@ -1,9 +1,9 @@
-function [TCP,data]=JavaTcpServer(action,TCP,data,config)
+function [TCP,data,cleanupObj]=JavaTcpServer(action,TCP,data,config, httpServer)
 persistent GlobalserverSocket;
 import java.net.Socket
 import java.io.*
 import java.net.ServerSocket
-timeout=config.connectTimeout * 1000;
+% timeout=config.connectTimeout * 1000;
 if(nargin<3), data=[]; end
 
 switch(action)
@@ -27,17 +27,29 @@ switch(action)
         end
         
         serverSocket.setReuseAddress(true);
+        timeout = 200;
         serverSocket.setSoTimeout(timeout);
         serverSocket.setPerformancePreferences(0, 1, 2);
+        cleanupObj = onCleanup(@TCP.serverSocket.close);
         TCP.port = data;
         TCP.serverSocket=serverSocket;
         GlobalserverSocket=serverSocket;
-        TCP.stopwindow=stopwindow();
+        % TCP.stopwindow=stopwindow();
     case 'accept'
         while(true)
-            try socket = TCP.serverSocket.accept;  break; catch, end
-            drawnow
-            if(~ishandle(TCP.stopwindow)), TCP.socket=-1; return, end
+            try
+                % start = tic;
+                socket = TCP.serverSocket.accept;
+                break;
+            catch ex
+                if ~isempty(ex.ExceptionObject) && isa(ex.ExceptionObject, 'java.net.SocketTimeoutException')
+                    config.app.handleFutures(httpServer);
+                    continue
+                else
+                    TCP.socket=-1;
+                    return
+                end
+            end
         end
         TCP.socket = socket;
         TCP.remoteHost = char(socket.getInetAddress);

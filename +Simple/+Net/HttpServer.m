@@ -37,6 +37,8 @@ classdef HttpServer < handle
         
         % Event listeners
         stopServerEventListener;
+        
+        ClientMap;
     end
     
     methods
@@ -75,6 +77,8 @@ classdef HttpServer < handle
             else
                 this.networker = JavaSocketWrapper(this);
             end
+            
+            this.ClientMap = containers.Map();
         end
         
         function initParpool(this)
@@ -208,6 +212,7 @@ classdef HttpServer < handle
                 
                 try
                     didTerminate = this.networker.listen();
+                    % this.log('SNIS after listen()', '', this.LogTypes.Info);
                 catch ex
                     this.logError(ex);
                     continue;
@@ -231,6 +236,8 @@ classdef HttpServer < handle
                 try
                     % Get client request information
                     request = this.networker.read();
+                    token = string(this.networker.tcpListener.socket);
+                    this.ClientMap(token) = this.networker.tcpListener;
                 catch ex
                     this.logError(ex);
                     try
@@ -242,8 +249,24 @@ classdef HttpServer < handle
                     continue;
                 end
                 
-                % Get client request information
-                this.requestPipeline(request);
+                try
+                    % Get client request information
+                    [app, ~] = this.loadSession(request);
+                    fut = parfeval(@this.requestPipeline, 3, request, app, token);
+                    if ~isempty(fut.Error)
+                        for i = 1:numel(fut.Error.cause)
+                            this.logError(fut.Error.cause{i});
+                        end
+                        this.handleErrorResponse(request, Simple.App.App.current, fut.Error.cause{1});
+                        this.networker.terminateClientConnection();
+                        
+                    elseif isprop(app, 'Futures')
+                        app.Futures{end+1} = fut;
+                    end
+                catch ex
+                    this.logError(ex);
+                    this.networker.terminateClientConnection();
+                end
             end
             
             this.log('Stopping by user request');
@@ -252,15 +275,38 @@ classdef HttpServer < handle
             this.checkStopFlag = false;
         end
         
-        function requestPipeline(this, request)
+        function handleBackgroundRequest(this, request, ex, token)
+            % this.log("handleBackgroundRequest: entered", '', this.LogTypes.Debug);
+            if isempty(request)
+                % this.log("handleBackgroundRequest: calling handleEmptyResponse", '', this.LogTypes.Debug);
+                this.handleEmptyResponse();
+                return;
+            end
+            
+            if ~isempty(ex)
+                % this.log("handleBackgroundRequest: calling handleErrorResponse", '', this.LogTypes.Debug);
+                this.handleErrorResponse(request, App.current, ex);
+                return;
+            end
+            
+            % this.log("handleBackgroundRequest: calling handleResponse", '', this.LogTypes.Debug);
+            this.handleResponse(request, token);
+        end
+        
+        function [ret_request, ret_ex, ret_token] = requestPipeline(this, request, app, token)
             import Simple.*;
             import Simple.App.*;
             import Simple.Net.*;
 
+            % this.log("requestPipeline", '', this.LogTypes.Debug);
+            ret_request = request;
+            ret_ex = [];
+            ret_token = token;
             % this happens when the networker times-out
             if(isempty(request))
                 % Write client response
-                this.handleEmptyResponse();
+%                 this.handleEmptyResponse();
+%                 return;
                 return;
             end
 
@@ -268,16 +314,19 @@ classdef HttpServer < handle
             notify(this, 'RequestAccepted');
                 
             % Load client session state
-            try
-                [app, request] = this.loadSession(request);
-            catch ex
-                this.logError(ex);
+            if isempty(app)
                 try
-                    this.handleErrorResponse(request, App.current, ex);
-                catch ex1
-                    this.logError(ex1);
+                    [app, request] = this.loadSession(request);
+                catch ex
+                    ret_ex = ex;
+%                     this.logError(ex);
+%                     try
+%                         this.handleErrorResponse(request, App.current, ex);
+%                     catch ex1
+%                         this.logError(ex1);
+%                     end
+                    return;
                 end
-                return;
             end
 
             % Raise SessionLoaded event
@@ -287,17 +336,18 @@ classdef HttpServer < handle
             try
                 this.handleRequest(request, app);
             catch ex
-                this.logError(ex);
-                try
-                    this.handleErrorResponse(request, App.current, ex);
-                catch ex1
-                    this.logError(ex1);
-                end
+                ret_ex = ex;
+%                 this.logError(ex);
+%                 try
+%                     this.handleErrorResponse(request, App.current, ex);
+%                 catch ex1
+%                     this.logError(ex1);
+%                 end
                 return;
             end
 
             % Write client response
-            this.handleResponse(request);
+            % this.handleResponse(request);
         end
         
         function logError(this, ex)
@@ -451,18 +501,22 @@ classdef HttpServer < handle
             end
 
             % Delegate the current request to the correct HttpHandler
+            this.log('calling requestHandler', request, this.LogTypes.Debug);
             requestHandler.handleRequest(request, app);
+            this.log('request handled', request, this.LogTypes.Debug);
             
             % Raise RequestHandled event
             notify(this, 'RequestHandled');
         end
         
-        function handleResponse(this, request)
+        function handleResponse(this, request, token)
             response = request.Response;
-            this.log('Response sent to client', response, this.LogTypes.Debug); 
 
             try
-                response.send();
+                % get the tcpListener for this client socket
+                tcpListener = this.ClientMap(token);
+                response.send(tcpListener);
+                this.log(sprintf('Response sent to %s', tcpListener.socket), response, this.LogTypes.Debug);
             catch ex
                 this.networker.terminateClientConnection();
                 this.logError(ex);

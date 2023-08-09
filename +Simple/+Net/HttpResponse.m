@@ -83,9 +83,9 @@ classdef HttpResponse < handle
             end
         end
         
-        function send(this)
+        function send(this, tcpListener)
             this.terminate();
-            this.Server.networker.sendResponse(this.getHeaderText(), this.Content);
+            this.Server.networker.sendResponse(this.getHeaderText(), this.Content, tcpListener);
         end
         
         function redirect(this, url)
