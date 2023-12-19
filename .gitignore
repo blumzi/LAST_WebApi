@@ -4,3 +4,4 @@ resources/
 *.swp
 *.log
 snisWebSite/log
++obs/+api/+POSIXsocket/__pycache__/
